@@ -21,8 +21,8 @@ this_month = str(today.month).zfill(2)
 this_day = str(today.day).zfill(2)
 yesterday_day = str((today - dt.timedelta(days=1)).day).zfill(2)
 
-types = os.environ['TYPES'].split(',').lower()
-countries = os.environ['COUNTRIES'].lower()
+types = [x.lower() for x in os.environ['TYPES'].split(',')]
+countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
 
 for country in countries:
     temp_result2 = pd.DataFrame()
