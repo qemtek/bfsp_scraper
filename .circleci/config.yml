@@ -9,7 +9,6 @@ jobs:
       - run:
           command: |
             # Setup environment, install dependencies
-            sudo apt-get install bsdmainutils
             virtualenv venv
             . venv/bin/activate
             pip install --upgrade pip
