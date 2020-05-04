@@ -13,7 +13,7 @@ jobs:
             . venv/bin/activate
             pip install --upgrade pip
             pip install -r requirements.txt
-            export COUNTRIES='gb,ire'
+            export COUNTRIES='uk,ire'
             export TYPES='win,place'
             export BUCKET_NAME='betfair-exchange-qemtek'
             # Run daily updates

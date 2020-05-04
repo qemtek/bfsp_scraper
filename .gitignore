@@ -3,3 +3,5 @@ bfsp_scraper/tmp/*
 .tox/*
 .idea/*
 .DS_STORE
+*.pyc
+bfsp_scraper/__pycache__/*
