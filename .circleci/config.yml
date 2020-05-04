@@ -18,6 +18,7 @@ jobs:
             export BUCKET_NAME='betfair-exchange-qemtek'
             # Run daily updates
             python3 ./bfsp_scraper/get_yesterdays_data.py
+
 workflows:
   version: 2.1
   daily-update:
