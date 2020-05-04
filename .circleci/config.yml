@@ -22,7 +22,7 @@ workflows:
   version: 2.1
   daily-update:
     jobs:
-      - build-and-scrape
+      - build-and-scrape:
           context: aws
 #    triggers:
 #      - schedule:
