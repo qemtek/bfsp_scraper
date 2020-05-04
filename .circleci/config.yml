@@ -1,0 +1,33 @@
+jobs:
+  build-and-scrape:
+    working_directory: ~/project
+    docker:
+      - image: circleci/python:3.7.2
+    steps:
+      - checkout
+      - run:
+          command: |
+            # Setup environment, install dependencies
+            sudo apt-get install bsdmainutils
+            virtualenv venv
+            . venv/bin/activate
+            pip install --upgrade pip
+            pip install -r requirements.txt
+            export COUNTRIES='gb,ire'
+            export TYPES='win,place'
+            export BUCKET_NAME='betfair-exchange-qemtek'
+            # Run daily updates
+            python3 ./bfsp_scraper/get_yesterdays_data.py
+workflows:
+  version: 2.1
+  daily-update:
+    jobs:
+      - build-and-scrape
+          context: aws
+#    triggers:
+#      - schedule:
+#          cron: "0 0 * * *"
+#          filters:
+#            branches:
+#              only:
+#                - master
