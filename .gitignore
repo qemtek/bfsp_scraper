@@ -1,0 +1,5 @@
+venv/*
+bfsp_scraper/tmp/*
+.tox/*
+.idea/*
+.DS_STORE

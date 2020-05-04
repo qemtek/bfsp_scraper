@@ -1,0 +1,29 @@
+Metadata-Version: 1.2
+Name: bfsp-scraper
+Version: 0.0.1
+Summary: Automated scraping tool for Betfair Exchange starting price (SP) data.
+Home-page: https://github.com/qemtek/bfsp_scarper
+Author: Christopher Collins
+Author-email: qemtek@gmail.com
+License: MIT
+Description: 
+        #### Betfair Starting Price (SP) Scraper
+        
+        This repo contains an automated tool for scraping data from the betfair SP website and storing the results in an S3 bucket. There are two main scripts, one for obtaining the latest data (yesterday) and another to get the last 10 years of data. In the latter script, if the file for a particular day/type (win/place) already exists in S3, the job will skip for that day.
+        
+        Required environment variables:
+        - COUNTRIES - Comma separated country codes, for example: gb, ire
+        - TYPES - Comma separated market types, for example: win, place
+        - AWS_ACCESS_KEY_ID - The access key to access your S3 bucket.
+        - AWS_SECRET_ACCESS_KEY - The secret access key to access your S3 bucket.
+        - BUCKET_NAME - The name of the S3 bucket you want data to be put into.
+Platform: UNKNOWN
+Classifier: License :: OSI Approved :: MIT License
+Classifier: Programming Language :: Python
+Classifier: Programming Language :: Python :: 3
+Classifier: Programming Language :: Python :: 3.6
+Classifier: Programming Language :: Python :: 3.7
+Classifier: Programming Language :: Python :: 3.8
+Classifier: Programming Language :: Python :: Implementation :: CPython
+Classifier: Programming Language :: Python :: Implementation :: PyPy
+Requires-Python: >=3.7.0
