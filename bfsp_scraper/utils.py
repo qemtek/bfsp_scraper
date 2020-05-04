@@ -3,7 +3,7 @@ import errno
 import time
 import pandas as pd
 
-from bfsp_scraper.s3_tools import upload_to_s3
+from s3_tools import upload_to_s3
 
 
 def clean_name(x, illegal_symbols="'$@#^(%*)._ ", append_with=None):
