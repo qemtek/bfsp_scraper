@@ -3,7 +3,9 @@ import errno
 import time
 import pandas as pd
 
-from s3_tools import upload_to_s3
+import awswrangler as wr
+
+S3_BUCKET = os.environ['BUCKET_NAME']
 
 
 def clean_name(x, illegal_symbols="'$@#^(%*)._ ", append_with=None):
@@ -78,9 +80,7 @@ def download_sp_from_link(link, country, type, day, month, year):
             lambda x: clean_name(x['selection_name'], append_with=x['country']), axis=1)
         df['event_dt'] = pd.to_datetime(df['event_dt'], format="%d-%m-%Y %H:%M")
         df['event_date'] = df['event_dt'].apply(lambda x: str(x.date()))
-        file_name = f"{type}{country}{year}{month}{day}.json"
-        with safe_open(f"tmp/{file_name}", 'w') as f_out:
-            df.to_json(f_out)
-        # Upload the results to S3
-        upload_to_s3(f"tmp/{file_name}", s3_path=f'bfex_sp/{file_name}', bucket=os.environ['BUCKET_NAME'])
-        os.remove(f'tmp/{file_name}')
+        file_name = f"{type}{country}{year}{month}{day}"
+        # Upload the dataframe to S3 in parquet format
+        s3_path = f"s3://{S3_BUCKET}/{file_name}.parquet"
+        wr.s3.to_parquet(df, s3_path)
