@@ -6,12 +6,12 @@ import datetime as dt
 from utils import download_sp_from_link
 from s3_tools import list_files
 
-files = list_files(bucket=os.environ['BUCKET_NAME'], prefix='bfex_sp')
+files = list_files(bucket=os.environ['BUCKET_NAME'], prefix='data')
 # Remove folder name from the list of returned objects
 if len(files) > 1:
     files = files[1:]
-    file_names = [f.get('Key').split('bfex_sp/')[1] for f in files
-                  if len(f.get('Key').split('bfex_sp/')) > 1]
+    file_names = [f.get('Key').split('data/')[1] for f in files
+                  if len(f.get('Key').split('data/')) > 1]
 else:
     file_names = []
 

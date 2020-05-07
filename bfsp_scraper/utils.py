@@ -2,8 +2,8 @@ import os
 import errno
 import time
 import pandas as pd
-
 import awswrangler as wr
+
 
 S3_BUCKET = os.environ['BUCKET_NAME']
 
@@ -82,5 +82,5 @@ def download_sp_from_link(link, country, type, day, month, year):
         df['event_date'] = df['event_dt'].apply(lambda x: str(x.date()))
         file_name = f"{type}{country}{year}{month}{day}"
         # Upload the dataframe to S3 in parquet format
-        s3_path = f"s3://{S3_BUCKET}/{file_name}.parquet"
+        s3_path = f"s3://{S3_BUCKET}/data/{file_name}.parquet"
         wr.s3.to_parquet(df, s3_path)
