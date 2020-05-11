@@ -19,11 +19,21 @@ jobs:
             export AWS_GLUE_DB='finish-time-predict'
             export AWS_GLUE_TABLE='betfair-sp'
             export PROJECT_DIR=/home/circleci/project/bfsp_scraper
-            export PYTHONPATH=/home/circleci/project/bfsp_scraper
+            export PYTHONPATH=/home/circleci/project
             AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
             AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
             # Run daily updates
             python3 ./bfsp_scraper/get_yesterdays_data.py
+  crawl-tables:
+    working_directory: ~/project
+      docker:
+          - image: circleci/python:3.7.2
+      steps:
+        - checkout
+        - run:
+            command: |
+              # Setup environment, install dependencies
+              python3 ./bfsp_scraper/run_glue_crawler.py
 
 workflows:
   version: 2.1
@@ -31,10 +41,19 @@ workflows:
     jobs:
       - build-and-scrape:
           context: aws
-#    triggers:
-#      - schedule:
-#          cron: "0 9 * * *"
-#          filters:
-#            branches:
-#              only:
-#                - master
+    triggers:
+      - schedule:
+          cron: "0 9 * * *"
+          filters:
+            branches:
+              only:
+                - master
+  run-glue-crawler:
+    jobs:
+      - build-and-scrape:
+          - context: aws
+      - crawl-tables:
+          context: aws
+          timeout: 1500
+      - requires:
+          - build-and-scrape

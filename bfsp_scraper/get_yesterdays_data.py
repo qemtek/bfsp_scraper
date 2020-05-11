@@ -5,8 +5,8 @@ import datetime as dt
 import awswrangler as wr
 import boto3
 
-from utils.general import download_sp_from_link
-from settings import S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, \
+from bfsp_scraper.utils.general import download_sp_from_link
+from bfsp_scraper.settings import S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, \
     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 
@@ -44,20 +44,15 @@ for country in countries:
             try:
                 try:
                     download_sp_from_link(link=link, country=country, type=type,
-                                       day=this_day, month=this_month, year=this_year)
+                                       day=this_day, month=this_month, year=this_year,
+                                        mode='overwrite_partitions',
+                                        partition_cols=['event_dt', 'selection_name'])
                 except Exception as e:
                     print(f"Attempt failed. Retrying.. Error: {e}")
                     time.sleep(1)
                     download_sp_from_link(link=link, country=country, type=type,
-                                       day=this_day, month=this_month, year=this_year)
+                                          day=this_day, month=this_month, year=this_year,
+                                          mode='overwrite_partitions',
+                                          partition_cols=['event_dt', 'selection_name'])
             except Exception as e:
                 print(f"Couldnt get data for link: {link}")
-
-# Run crawler
-print("Running crawler")
-res = wr.s3.store_parquet_metadata(
-    path=f"s3://{S3_BUCKET}/datasets/",
-    database=AWS_GLUE_DB,
-    table=AWS_GLUE_TABLE,
-    dataset=True
-)

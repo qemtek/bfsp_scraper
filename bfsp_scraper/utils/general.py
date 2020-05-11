@@ -5,7 +5,7 @@ import pandas as pd
 import awswrangler as wr
 import boto3
 
-from settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 
 session = boto3.session.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -71,7 +71,7 @@ def try_again(wait_seconds=1, retries=3):
 
 
 @try_again()
-def download_sp_from_link(link, country, type, day, month, year, mode='append'):
+def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     df = pd.read_csv(link)
     if len(df) > 0:
         df['country'] = country
@@ -90,7 +90,8 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append'):
         wr.s3.to_parquet(df, s3_path, boto3_session=session)
         # Upload the data to a dataset in S3 as well
         wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database='finish-time-predict',
-                         table='betfair-sp', dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session)
+                         table='betfair-sp', dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session,
+                         partition_cols=partition_cols)
 
 
 def append_to_pdataset(local_path, mode):

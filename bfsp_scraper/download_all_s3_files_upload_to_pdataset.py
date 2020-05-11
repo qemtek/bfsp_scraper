@@ -11,8 +11,9 @@ import os
 
 from apscheduler.schedulers.background import BackgroundScheduler
 
-from settings import PROJECT_DIR, S3_BUCKET, AWS_GLUE_DB, AWS_GLUE_TABLE, SCHEMA_COLUMNS
-from s3_tools import download_from_s3
+from bfsp_scraper.settings import PROJECT_DIR, S3_BUCKET, AWS_GLUE_DB, \
+    AWS_GLUE_TABLE, SCHEMA_COLUMNS
+from bfsp_scraper.utils.s3_tools import download_from_s3
 
 session = boto3.session.Session()
 
@@ -69,11 +70,4 @@ while len(scheduler2._pending_jobs) > 0:
     print(f"Jobs left: {len(scheduler2._pending_jobs)}")
 scheduler2.shutdown()
 
-# Run crawler
-print("Running crawler")
-res = wr.s3.store_parquet_metadata(
-    path=f"s3://{S3_BUCKET}/datasets/",
-    database=AWS_GLUE_DB,
-    table=AWS_GLUE_TABLE,
-    dataset=True
-)
+
