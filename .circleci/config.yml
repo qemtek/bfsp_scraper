@@ -34,6 +34,7 @@ jobs:
           command: |
             # Setup environment, install dependencies
             python3 ./bfsp_scraper/run_glue_crawler.py
+          no_output_timeout: 15m
 
 workflows:
   version: 2.1
@@ -54,6 +55,5 @@ workflows:
           context: aws
       - crawl-tables:
           context: aws
-          no_output_timeout: 15m
           requires:
             - build-and-scrape
