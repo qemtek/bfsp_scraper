@@ -27,7 +27,7 @@ jobs:
   crawl-tables:
     working_directory: ~/project
     docker:
-        - image: circleci/python:3.7.2
+      - image: circleci/python:3.7.2
     steps:
       - checkout
       - run:
@@ -51,9 +51,9 @@ workflows:
   run-glue-crawler:
     jobs:
       - build-and-scrape:
-          - context: aws
+          context: aws
       - crawl-tables:
           context: aws
           timeout: 1500
-      - requires:
-          - build-and-scrape
+          requires:
+            - build-and-scrape
