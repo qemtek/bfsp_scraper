@@ -4,10 +4,11 @@ requirements.txt
 setup.py
 ./requirements.txt
 bfsp_scraper/__init__.py
+bfsp_scraper/download_all_s3_files_upload_to_pdataset.py
 bfsp_scraper/full_refresh.py
 bfsp_scraper/get_yesterdays_data.py
 bfsp_scraper/s3_tools.py
-bfsp_scraper/utils.py
+bfsp_scraper/settings.py
 bfsp_scraper.egg-info/PKG-INFO
 bfsp_scraper.egg-info/SOURCES.txt
 bfsp_scraper.egg-info/dependency_links.txt

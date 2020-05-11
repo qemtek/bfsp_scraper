@@ -5,10 +5,11 @@ import pandas as pd
 import awswrangler as wr
 import boto3
 
-from settings import SCHEMA_COLUMNS
+from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
-S3_BUCKET = os.environ['BUCKET_NAME']
-session = boto3.session.Session()
+
+session = boto3.session.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
+                                aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
 
 
 def clean_name(x, illegal_symbols="'$@#^(%*)._ ", append_with=None):

@@ -1,6 +1,6 @@
 Metadata-Version: 1.2
 Name: bfsp-scraper
-Version: 0.0.1
+Version: 0.0.2
 Summary: Automated scraping tool for Betfair Exchange starting price (SP) data.
 Home-page: https://github.com/qemtek/bfsp_scarper
 Author: Christopher Collins

@@ -18,6 +18,7 @@ jobs:
             export S3_BUCKET='betfair-exchange-qemtek'
             export AWS_GLUE_DB='finish-time-predict'
             export AWS_GLUE_TABLE='betfair-sp'
+            export PROJECT_DIR=/home/circleci/project/bfsp_scraper
             AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
             AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
             # Run daily updates
