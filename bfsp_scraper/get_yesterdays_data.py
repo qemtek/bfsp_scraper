@@ -34,7 +34,6 @@ for country in countries:
     temp_result2 = pd.DataFrame()
     for type in types:
         temp_result = pd.DataFrame()
-
         if f"{type}{country}{this_year}{this_month}{this_day}.json" in file_names:
             print(f"{type}{country}{this_year}{this_month}{this_day} exists in S3, skipping")
         else:
@@ -45,14 +44,12 @@ for country in countries:
                 try:
                     download_sp_from_link(link=link, country=country, type=type,
                                        day=this_day, month=this_month, year=this_year,
-                                        mode='overwrite_partitions',
-                                        partition_cols=['event_dt', 'selection_name'])
+                                        mode='append', partition_cols=['year'])
                 except Exception as e:
                     print(f"Attempt failed. Retrying.. Error: {e}")
                     time.sleep(1)
                     download_sp_from_link(link=link, country=country, type=type,
                                           day=this_day, month=this_month, year=this_year,
-                                          mode='overwrite_partitions',
-                                          partition_cols=['event_dt', 'selection_name'])
+                                          mode='append', partition_cols=['year'])
             except Exception as e:
                 print(f"Couldnt get data for link: {link}")

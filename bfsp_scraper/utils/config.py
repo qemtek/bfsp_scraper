@@ -1,7 +1,7 @@
 import os
 
 try:
-    import configuration
+    from bfsp_scraper import configuration
 except ImportError:
     configuration = {}
 

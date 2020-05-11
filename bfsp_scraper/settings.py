@@ -22,6 +22,7 @@ SCHEMA_COLUMNS = {
     'type': 'string',
     'selection_name_cleaned': 'string',
     'event_date': 'string',
+    'year': 'int'
 }
 
 PROJECT_DIR = get_attribute('PROJECT_DIR')

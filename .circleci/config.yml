@@ -30,36 +30,6 @@ jobs:
           key: py-deps-{{ checksum "requirements.txt" }}
           paths:
             - "/venv"
-  crawl-tables:
-    working_directory: ~/project
-    docker:
-      - image: circleci/python:3.7.2
-    steps:
-      - checkout
-      - restore_cache:
-          key: py-deps-{{ checksum "requirements.txt" }}
-      - run:
-          command: |
-            # Setup environment, install dependencies
-            virtualenv venv
-            . venv/bin/activate
-            pip install --upgrade pip
-            pip install -r requirements.txt
-            export COUNTRIES='uk,ire'
-            export TYPES='win,place'
-            export S3_BUCKET='betfair-sp'
-            export AWS_GLUE_DB='finish-time-predict'
-            export AWS_GLUE_TABLE='betfair-sp'
-            export PROJECT_DIR=/home/circleci/project/bfsp_scraper
-            export PYTHONPATH=/home/circleci/project
-            AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
-            AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            python3 ./bfsp_scraper/run_glue_crawler.py overwrite
-          no_output_timeout: 30m
-      - save_cache:
-          key: py-deps-{{ checksum "requirements.txt" }}
-          paths:
-            - "/venv"
 
 workflows:
   version: 2.1
@@ -69,23 +39,8 @@ workflows:
           context: aws
     triggers:
       - schedule:
-          cron: "0 9 * * 1-5"
+          cron: "0 9 * * *"
           filters:
             branches:
               only:
                 - master
-  run-glue-crawler:
-    jobs:
-      - build-and-scrape:
-          context: aws
-      - crawl-tables:
-          context: aws
-          requires:
-            - build-and-scrape
-#    triggers:
-#      - schedule:
-#          cron: "0 9 * * 6"
-#          filters:
-#            branches:
-#              only:
-#                - master

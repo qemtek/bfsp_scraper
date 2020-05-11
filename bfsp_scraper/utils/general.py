@@ -76,6 +76,8 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
     if len(df) > 0:
         df['country'] = country
         df['type'] = type
+        df['event_dt'] = pd.to_datetime(df['event_dt'])
+        df['year'] = df['event_dt'].apply(lambda x: x.year)
         # Clean up data
         df.columns = [col.lower() for col in list(df.columns)]
         # Change country UK to GB
@@ -92,10 +94,3 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
         wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database='finish-time-predict',
                          table='betfair-sp', dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session,
                          partition_cols=partition_cols)
-
-
-def append_to_pdataset(local_path, mode):
-    df = pd.read_parquet(local_path)
-    wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True,
-                     dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session)
-    print(f"Uploaded {local_path} to parquet dataset")
