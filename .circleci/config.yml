@@ -15,7 +15,7 @@ jobs:
             pip install -r requirements.txt
             export COUNTRIES='uk,ire'
             export TYPES='win,place'
-            export S3_BUCKET='betfair-exchange-qemtek'
+            export S3_BUCKET='betfair-sp'
             export AWS_GLUE_DB='finish-time-predict'
             export AWS_GLUE_TABLE='betfair-sp'
             export PROJECT_DIR=/home/circleci/project/bfsp_scraper
