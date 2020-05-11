@@ -54,8 +54,8 @@ jobs:
             export PYTHONPATH=/home/circleci/project
             AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
             AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
-            python3 ./bfsp_scraper/run_glue_crawler.py
-          no_output_timeout: 15m
+            python3 ./bfsp_scraper/run_glue_crawler.py overwrite
+          no_output_timeout: 30m
       - save_cache:
           key: py-deps-{{ checksum "requirements.txt" }}
           paths:
@@ -69,7 +69,7 @@ workflows:
           context: aws
     triggers:
       - schedule:
-          cron: "0 9 * * *"
+          cron: "0 9 * * 1-5"
           filters:
             branches:
               only:
@@ -82,3 +82,10 @@ workflows:
           context: aws
           requires:
             - build-and-scrape
+    triggers:
+      - schedule:
+          cron: "0 9 * * 6"
+          filters:
+            branches:
+              only:
+                - master
