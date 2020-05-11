@@ -54,6 +54,6 @@ workflows:
           context: aws
       - crawl-tables:
           context: aws
-          timeout: 1500
+          no_output_timeout: 15m
           requires:
             - build-and-scrape
