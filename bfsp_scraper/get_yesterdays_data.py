@@ -6,7 +6,7 @@ import awswrangler as wr
 import boto3
 
 from utils.general import download_sp_from_link
-from bfsp_scraper.settings import S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, \
+from settings import S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, \
     AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 

@@ -12,7 +12,7 @@ from calendar import monthrange
 
 from utils.general import download_sp_from_link
 from s3_tools import list_files
-from bfsp_scraper.settings import AWS_GLUE_DB, AWS_GLUE_TABLE, S3_BUCKET, \
+from settings import AWS_GLUE_DB, AWS_GLUE_TABLE, S3_BUCKET, \
     AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
 
 scheduler = BackgroundScheduler()
