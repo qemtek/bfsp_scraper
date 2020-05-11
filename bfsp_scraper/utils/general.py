@@ -5,7 +5,7 @@ import pandas as pd
 import awswrangler as wr
 import boto3
 
-from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 
 session = boto3.session.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
