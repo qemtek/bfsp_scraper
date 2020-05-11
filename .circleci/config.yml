@@ -15,7 +15,11 @@ jobs:
             pip install -r requirements.txt
             export COUNTRIES='uk,ire'
             export TYPES='win,place'
-            export BUCKET_NAME='betfair-exchange-qemtek'
+            export S3_BUCKET='betfair-exchange-qemtek'
+            export AWS_GLUE_DB='finish-time-predict'
+            export AWS_GLUE_TABLE='betfair-sp'
+            AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID
+            AWS_SECRET_ACCESS_KEY=$AWS_SECRET_ACCESS_KEY
             # Run daily updates
             python3 ./bfsp_scraper/get_yesterdays_data.py
 
@@ -25,10 +29,10 @@ workflows:
     jobs:
       - build-and-scrape:
           context: aws
-    triggers:
-      - schedule:
-          cron: "0 9 * * *"
-          filters:
-            branches:
-              only:
-                - master
+#    triggers:
+#      - schedule:
+#          cron: "0 9 * * *"
+#          filters:
+#            branches:
+#              only:
+#                - master

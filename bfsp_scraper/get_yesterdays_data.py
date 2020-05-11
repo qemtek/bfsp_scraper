@@ -2,16 +2,23 @@ import pandas as pd
 import time
 import os
 import datetime as dt
+import awswrangler as wr
+import boto3
 
-from utils import download_sp_from_link
-from s3_tools import list_files
+from utils.general import download_sp_from_link
+from bfsp_scraper.settings import S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, \
+    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
-files = list_files(bucket=os.environ['BUCKET_NAME'], prefix='data')
-# Remove folder name from the list of returned objects
-if len(files) > 1:
-    files = files[1:]
-    file_names = [f.get('Key').split('data/')[1] for f in files
-                  if len(f.get('Key').split('data/')) > 1]
+
+use_files_in_s3 = True
+
+if use_files_in_s3:
+    # Get a list of all files in S3 currently
+    session = boto3.session.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
+                                    aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+    folder_dir = f's3://{S3_BUCKET}/data/'
+    files = wr.s3.list_objects(folder_dir, boto3_session=session)
+    file_names = [f.split(folder_dir)[1] for f in files]
 else:
     file_names = []
 
@@ -45,3 +52,12 @@ for country in countries:
                                        day=this_day, month=this_month, year=this_year)
             except Exception as e:
                 print(f"Couldnt get data for link: {link}")
+
+# Run crawler
+print("Running crawler")
+res = wr.s3.store_parquet_metadata(
+    path=f"s3://{S3_BUCKET}/datasets/",
+    database=AWS_GLUE_DB,
+    table=AWS_GLUE_TABLE,
+    dataset=True
+)

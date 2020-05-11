@@ -1,12 +1,21 @@
+# Download all files from Betfair's website and uplpoad them to an S3 bucket
+
 import pandas as pd
 import time
 import os
 import datetime as dt
+import awswrangler as wr
+import boto3
+from apscheduler.schedulers.background import BackgroundScheduler
 
 from calendar import monthrange
 
-from utils import download_sp_from_link
+from utils.general import download_sp_from_link
 from s3_tools import list_files
+from bfsp_scraper.settings import AWS_GLUE_DB, AWS_GLUE_TABLE, S3_BUCKET, \
+    AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
+
+scheduler = BackgroundScheduler()
 
 files = list_files(bucket=os.environ['BUCKET_NAME'], prefix='data')
 # Remove folder name from the list of returned objects
@@ -48,14 +57,25 @@ for country in countries:
                             year = year
                             link = f"http://www.betfairpromo.com/betfairsp/prices/" \
                                    f"dwbfprices{country}{type}{day}{month}{year}.csv"
-                            try:
-                                try:
-                                    download_sp_from_link(link=link, country=country, type=type,
-                                                       day=day, month=month, year=year)
-                                except Exception as e:
-                                    print(f"Attempt failed. Retrying.. Error: {e}")
-                                    time.sleep(1)
-                                    download_sp_from_link(link=link, country=country, type=type,
-                                                       day=day, month=month, year=year)
-                            except Exception as e:
-                                print(f"Couldnt get data for link: {link}")
+                            scheduler.add_job(func=download_sp_from_link, kwargs={
+                                'link': link, 'country': country, 'type': type,
+                                'day': day, 'month': month, 'year': year})
+
+scheduler.start()
+time.sleep(1)
+print(f"Jobs left: {len(scheduler._pending_jobs)}")
+time.sleep(1)
+while len(scheduler._pending_jobs) > 0:
+    print(f"Jobs left: {len(scheduler._pending_jobs)}")
+scheduler.shutdown()
+
+# Run crawler
+session = boto3.session.Session(
+    aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+print("Running crawler")
+res = wr.s3.store_parquet_metadata(
+    path=f"s3://{S3_BUCKET}/datasets/",
+    database=AWS_GLUE_DB,
+    table=AWS_GLUE_TABLE,
+    dataset=True
+)

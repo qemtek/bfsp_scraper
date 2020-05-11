@@ -1,6 +1,7 @@
 awswrangler==1.1.0
 boto3==1.13.1
 pandas==1.0.3
+apscheduler
 # Packaging
 setuptools==40.6.3
 wheel==0.32.3

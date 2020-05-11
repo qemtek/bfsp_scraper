@@ -5,7 +5,7 @@ import datetime as dt
 
 from calendar import monthrange
 
-from bfsp_scraper.utils import download_sp_from_link
+from utils.general import download_sp_from_link
 from bfsp_scraper.s3_tools import list_files
 
 files = list_files(bucket=os.environ['BUCKET_NAME'], prefix='bfex_sp')

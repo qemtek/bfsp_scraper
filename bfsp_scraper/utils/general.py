@@ -3,9 +3,12 @@ import errno
 import time
 import pandas as pd
 import awswrangler as wr
+import boto3
 
+from settings import SCHEMA_COLUMNS
 
 S3_BUCKET = os.environ['BUCKET_NAME']
+session = boto3.session.Session()
 
 
 def clean_name(x, illegal_symbols="'$@#^(%*)._ ", append_with=None):
@@ -67,7 +70,7 @@ def try_again(wait_seconds=1, retries=3):
 
 
 @try_again()
-def download_sp_from_link(link, country, type, day, month, year):
+def download_sp_from_link(link, country, type, day, month, year, mode='append'):
     df = pd.read_csv(link)
     if len(df) > 0:
         df['country'] = country
@@ -83,4 +86,14 @@ def download_sp_from_link(link, country, type, day, month, year):
         file_name = f"{type}{country}{year}{month}{day}"
         # Upload the dataframe to S3 in parquet format
         s3_path = f"s3://{S3_BUCKET}/data/{file_name}.parquet"
-        wr.s3.to_parquet(df, s3_path)
+        wr.s3.to_parquet(df, s3_path, boto3_session=session)
+        # Upload the data to a dataset in S3 as well
+        wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database='finish-time-predict',
+                         table='betfair-sp', dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session)
+
+
+def append_to_pdataset(local_path, mode):
+    df = pd.read_parquet(local_path)
+    wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True,
+                     dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session)
+    print(f"Uploaded {local_path} to parquet dataset")

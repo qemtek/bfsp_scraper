@@ -4,4 +4,7 @@ bfsp_scraper/tmp/*
 .idea/*
 .DS_STORE
 *.pyc
+*.cpython-37.pyc
 bfsp_scraper/__pycache__/*
+bfsp_scraper/s3_data/*
+bfsp_scraper/configuration.py
