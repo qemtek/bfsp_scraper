@@ -1,4 +1,4 @@
-from bfsp_scraper.utils.config import get_attribute
+from utils.config import get_attribute
 
 SCHEMA_COLUMNS = {
     'event_id': 'int',
