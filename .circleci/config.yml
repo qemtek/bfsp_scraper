@@ -26,14 +26,14 @@ jobs:
             python3 ./bfsp_scraper/get_yesterdays_data.py
   crawl-tables:
     working_directory: ~/project
-      docker:
-          - image: circleci/python:3.7.2
-      steps:
-        - checkout
-        - run:
-            command: |
-              # Setup environment, install dependencies
-              python3 ./bfsp_scraper/run_glue_crawler.py
+    docker:
+        - image: circleci/python:3.7.2
+    steps:
+      - checkout
+      - run:
+          command: |
+            # Setup environment, install dependencies
+            python3 ./bfsp_scraper/run_glue_crawler.py
 
 workflows:
   version: 2.1
