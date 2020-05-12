@@ -19,7 +19,7 @@ jobs:
             export TYPES='win,place'
             export S3_BUCKET='betfair-sp'
             export AWS_GLUE_DB='finish-time-predict'
-            export AWS_GLUE_TABLE='betfair-sp'
+            export AWS_GLUE_TABLE='betfair_sp'
             export PROJECT_DIR=/home/circleci/project/bfsp_scraper
             export PYTHONPATH=/home/circleci/project
             AWS_ACCESS_KEY_ID=$AWS_ACCESS_KEY_ID

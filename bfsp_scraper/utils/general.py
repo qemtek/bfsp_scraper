@@ -5,7 +5,8 @@ import pandas as pd
 import awswrangler as wr
 import boto3
 
-from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY, \
+    AWS_GLUE_TABLE, AWS_GLUE_DB
 
 
 session = boto3.session.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
@@ -91,6 +92,6 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
         s3_path = f"s3://{S3_BUCKET}/data/{file_name}.parquet"
         wr.s3.to_parquet(df, s3_path, boto3_session=session)
         # Upload the data to a dataset in S3 as well
-        wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database='finish-time-predict',
-                         table='betfair-sp', dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session,
+        wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database=AWS_GLUE_DB,
+                         table=AWS_GLUE_TABLE, dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session,
                          partition_cols=partition_cols)
