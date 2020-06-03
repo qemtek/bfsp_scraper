@@ -75,12 +75,12 @@ def try_again(wait_seconds=1, retries=3):
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     df = pd.read_csv(link)
     if len(df) > 0:
+        # Clean up data columns
+        df.columns = [col.lower() for col in list(df.columns)]
         df['country'] = country
         df['type'] = type
         df['event_dt'] = pd.to_datetime(df['event_dt'])
         df['year'] = df['event_dt'].apply(lambda x: x.year)
-        # Clean up data
-        df.columns = [col.lower() for col in list(df.columns)]
         # Change country UK to GB
         df['country'] = df['country'].apply(lambda x: 'gb' if x.lower() == 'uk' else x)
         df['selection_name_cleaned'] = df.apply(
