@@ -89,9 +89,10 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
         df['event_date'] = df['event_dt'].apply(lambda x: str(x.date()))
         file_name = f"{type}{country}{year}{month}{day}"
         # Upload the dataframe to S3 in parquet format
-        s3_path = f"s3://{S3_BUCKET}/data/{file_name}.parquet"
-        wr.s3.to_parquet(df, s3_path, boto3_session=session)
+        wr.s3.to_parquet(df, f"s3://{S3_BUCKET}/data/{file_name}.parquet", boto3_session=session)
         # Upload the data to a dataset in S3 as well
+        print('Uploading data to parquet dataset')
         wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database=AWS_GLUE_DB,
                          table=AWS_GLUE_TABLE, dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session,
                          partition_cols=partition_cols)
+        print('Uploading complete')
