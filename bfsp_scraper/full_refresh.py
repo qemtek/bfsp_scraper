@@ -4,20 +4,22 @@ import pandas as pd
 import time
 import os
 import datetime as dt
-import awswrangler as wr
-import boto3
-from apscheduler.schedulers.background import BackgroundScheduler
 
+from apscheduler.schedulers.background import BackgroundScheduler
 from calendar import monthrange
 
 from bfsp_scraper.utils.general import download_sp_from_link
 from bfsp_scraper.utils.s3_tools import list_files
-from bfsp_scraper.settings import AWS_GLUE_DB, AWS_GLUE_TABLE, S3_BUCKET, \
-    AWS_SECRET_ACCESS_KEY, AWS_ACCESS_KEY_ID
+from bfsp_scraper.settings import boto3_session, S3_BUCKET
 
-scheduler = BackgroundScheduler()
 
-files = list_files(bucket=os.environ['BUCKET_NAME'], prefix='data')
+job_defaults = {
+    'coalesce': False,
+    'max_instances': 10
+}
+scheduler = BackgroundScheduler(job_defaults=job_defaults)
+
+files = list_files(bucket=S3_BUCKET, prefix='data', session=boto3_session)
 # Remove folder name from the list of returned objects
 if len(files) > 1:
     files = files[1:]
@@ -38,7 +40,7 @@ for i in range(start_year, this_year+1):
 types = [x.lower() for x in os.environ['TYPES'].split(',')]
 countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
 
-
+table_refreshed = False
 for country in countries:
     temp_result2 = pd.DataFrame()
     for type in types:
@@ -55,27 +57,31 @@ for country in countries:
                             day = str(day).zfill(2)
                             month = str(month).zfill(2)
                             year = year
-                            link = f"http://www.betfairpromo.com/betfairsp/prices/" \
+                            link = f"https://promo.betfair.com/betfairsp/prices/" \
                                    f"dwbfprices{country}{type}{day}{month}{year}.csv"
-                            scheduler.add_job(func=download_sp_from_link, kwargs={
+                            scheduler.add_job(func=download_sp_from_link, id=str(hash(link)), kwargs={
                                 'link': link, 'country': country, 'type': type,
-                                'day': day, 'month': month, 'year': year})
+                                'day': day, 'month': month, 'year': year,
+                                'mode': 'overwrite' if not table_refreshed else 'append'},
+                                              misfire_grace_time=999999999)
+                            table_refreshed = True
 
 scheduler.start()
 time.sleep(1)
-print(f"Jobs left: {len(scheduler._pending_jobs)}")
+print(f"Jobs left: {len(scheduler.get_jobs())}")
 time.sleep(1)
-while len(scheduler._pending_jobs) > 0:
-    print(f"Jobs left: {len(scheduler._pending_jobs)}")
+while len(scheduler.get_jobs()) > 0:
+    print(f"Jobs left: {len(scheduler.get_jobs())}")
+    time.sleep(1)
 scheduler.shutdown()
 
-# Run crawler
-session = boto3.session.Session(
-    aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-print("Running crawler")
-res = wr.s3.store_parquet_metadata(
-    path=f"s3://{S3_BUCKET}/datasets/",
-    database=AWS_GLUE_DB,
-    table=AWS_GLUE_TABLE,
-    dataset=True
-)
+# # Run crawler
+# session = boto3.session.Session(
+#     aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+# print("Running crawler")
+# res = wr.s3.store_parquet_metadata(
+#     path=f"s3://{S3_BUCKET}/datasets/",
+#     database=AWS_GLUE_DB,
+#     table=AWS_GLUE_TABLE,
+#     dataset=True
+# )

@@ -6,9 +6,7 @@ import awswrangler as wr
 import boto3
 
 from bfsp_scraper.utils.general import download_sp_from_link
-from bfsp_scraper.settings import S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, \
-    AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
-
+from bfsp_scraper.settings import S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
 
 use_files_in_s3 = True
 
@@ -42,14 +40,16 @@ for country in countries:
                    f"dwbfprices{country}{type}{this_day}{this_month}{this_year}.csv"
             try:
                 try:
-                    download_sp_from_link(link=link, country=country, type=type,
-                                       day=this_day, month=this_month, year=this_year,
-                                        mode='append', partition_cols=['year'])
+                    download_sp_from_link(
+                        link=link, country=country, type=type,
+                        day=this_day, month=this_month, year=this_year,
+                        mode='append')  # partition_cols=['year']
                 except Exception as e:
                     print(f"Attempt failed. Retrying.. Error: {e}")
                     time.sleep(1)
-                    download_sp_from_link(link=link, country=country, type=type,
-                                          day=this_day, month=this_month, year=this_year,
-                                          mode='append', partition_cols=['year'])
+                    download_sp_from_link(
+                        link=link, country=country, type=type,
+                        day=this_day, month=this_month, year=this_year,
+                        mode='append')  # , partition_cols=['year']
             except Exception as e:
                 print(f"Couldnt get data for link: {link}")

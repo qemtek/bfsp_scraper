@@ -1,3 +1,5 @@
+import boto3
+
 from bfsp_scraper.utils.config import get_attribute
 
 SCHEMA_COLUMNS = {
@@ -33,3 +35,8 @@ AWS_GLUE_TABLE = get_attribute('AWS_GLUE_TABLE')
 
 AWS_ACCESS_KEY_ID = get_attribute('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = get_attribute('AWS_SECRET_ACCESS_KEY')
+
+TYPES = get_attribute('TYPES')
+COUNTRIES = get_attribute('COUNTRIES')
+
+boto3_session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)

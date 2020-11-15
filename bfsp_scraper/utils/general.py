@@ -56,7 +56,7 @@ def try_again(wait_seconds=1, retries=3):
                 result = func(*args, **kwargs)
                 return result
             except Exception as e:
-                print('{} failed. retrying, error: ', func.__name__)
+                print(f'{func.__name__} failed. retrying, error: ')
                 print(e)
                 for i in range(retries):
                     try:
@@ -64,7 +64,7 @@ def try_again(wait_seconds=1, retries=3):
                         result = func(*args, **kwargs)
                         return result
                     except Exception as e:
-                        print('{} failed. retrying, error: ', func.__name__)
+                        print(f'{func.__name__} failed. retrying, error: ')
                         print(e)
                         pass
         return wrapper
@@ -73,19 +73,20 @@ def try_again(wait_seconds=1, retries=3):
 
 @try_again()
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
+    print(f'Trying to download link: {link}')
     df = pd.read_csv(link)
     if len(df) > 0:
         # Clean up data columns
         df.columns = [col.lower() for col in list(df.columns)]
         df['country'] = country
         df['type'] = type
-        df['event_dt'] = pd.to_datetime(df['event_dt'])
+        df['event_dt'] = pd.to_datetime(df['event_dt'], format="%d-%m-%Y %H:%M")
+        df['event_dt'] = pd.to_datetime(df['event_dt'].dt.strftime('%Y-%m-%d %H:%M'))
         df['year'] = df['event_dt'].apply(lambda x: x.year)
         # Change country UK to GB
         df['country'] = df['country'].apply(lambda x: 'gb' if x.lower() == 'uk' else x)
         df['selection_name_cleaned'] = df.apply(
             lambda x: clean_name(x['selection_name'], append_with=x['country']), axis=1)
-        df['event_dt'] = pd.to_datetime(df['event_dt'], format="%d-%m-%Y %H:%M")
         df['event_date'] = df['event_dt'].apply(lambda x: str(x.date()))
         file_name = f"{type}{country}{year}{month}{day}"
         # Upload the dataframe to S3 in parquet format
@@ -96,3 +97,11 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
                          table=AWS_GLUE_TABLE, dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=session,
                          partition_cols=partition_cols)
         print('Uploading complete')
+    else:
+        print('df returned no rows')
+
+
+if __name__ == '__main__':
+    link = 'https://promo.betfair.com/betfairsp/prices/dwbfpricesukwin13112020.csv'
+    download_sp_from_link(link=link, country='uk', type='win', day=13,
+                          month=11, year=2020, mode='append', partition_cols=None)
