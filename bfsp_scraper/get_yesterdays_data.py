@@ -20,10 +20,11 @@ if use_files_in_s3:
 else:
     file_names = []
 
-today = dt.datetime.today().date()
-this_year = str(today.year)
-this_month = str(today.month).zfill(2)
-this_day = str(today.day).zfill(2)
+run_date = dt.datetime.today().date()
+# run_date = pd.to_datetime('2020-11-15').date()
+this_year = str(run_date.year)
+this_month = str(run_date.month).zfill(2)
+this_day = str(run_date.day).zfill(2)
 
 types = [x.lower() for x in os.environ['TYPES'].split(',')]
 countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
