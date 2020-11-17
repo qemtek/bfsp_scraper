@@ -36,7 +36,7 @@ for country in countries:
             print(f"{type}{country}{this_year}{this_month}{this_day} exists in S3, skipping")
         else:
             print(f"Running scraper for {this_year}/{this_month}/{this_day}/{type}/{country}")
-            link = f"http://www.betfairpromo.com/betfairsp/prices/" \
+            link = f"https://promo.betfair.com/betfairsp/prices/" \
                    f"dwbfprices{country}{type}{this_day}{this_month}{this_year}.csv"
             try:
                 try:
