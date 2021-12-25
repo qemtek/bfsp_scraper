@@ -75,13 +75,3 @@ while len(scheduler.get_jobs()) > 0:
     time.sleep(1)
 scheduler.shutdown()
 
-# # Run crawler
-# session = boto3.session.Session(
-#     aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
-# print("Running crawler")
-# res = wr.s3.store_parquet_metadata(
-#     path=f"s3://{S3_BUCKET}/datasets/",
-#     database=AWS_GLUE_DB,
-#     table=AWS_GLUE_TABLE,
-#     dataset=True
-# )
