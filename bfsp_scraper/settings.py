@@ -1,4 +1,6 @@
 import boto3
+import pathlib
+import bfsp_scraper
 
 from bfsp_scraper.utils.config import get_attribute
 
@@ -27,7 +29,7 @@ SCHEMA_COLUMNS = {
     'year': 'int'
 }
 
-PROJECT_DIR = get_attribute('PROJECT_DIR')
+PROJECT_DIR = str(pathlib.Path(bfsp_scraper.__file__).resolve().parent).replace('\\', '/')
 S3_BUCKET = get_attribute('S3_BUCKET')
 
 AWS_GLUE_DB = get_attribute('AWS_GLUE_DB')
@@ -39,4 +41,4 @@ AWS_SECRET_ACCESS_KEY = get_attribute('AWS_SECRET_ACCESS_KEY')
 TYPES = get_attribute('TYPES')
 COUNTRIES = get_attribute('COUNTRIES')
 
-boto3_session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
+boto3_session = boto3.Session(aws_access_key_id=AWS_ACCESS_KEY_ID, aws_secret_access_key=AWS_SECRET_ACCESS_KEY, region_name='eu-west-1')

@@ -40,7 +40,7 @@ for i in range(start_year, this_year+1):
 types = [x.lower() for x in os.environ['TYPES'].split(',')]
 countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
 
-table_refreshed = False
+table_refreshed = True  # Set to false to refresh
 for country in countries:
     temp_result2 = pd.DataFrame()
     for type in types:
