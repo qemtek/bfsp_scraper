@@ -33,8 +33,6 @@ PROJECT_DIR = str(pathlib.Path(bfsp_scraper.__file__).resolve().parent).replace(
 S3_BUCKET = get_attribute('S3_BUCKET')
 
 AWS_GLUE_DB = get_attribute('AWS_GLUE_DB')
-AWS_GLUE_TABLE = get_attribute('AWS_GLUE_TABLE')
-
 AWS_ACCESS_KEY_ID = get_attribute('AWS_ACCESS_KEY_ID')
 AWS_SECRET_ACCESS_KEY = get_attribute('AWS_SECRET_ACCESS_KEY')
 

@@ -4,7 +4,7 @@ import time
 import pandas as pd
 import awswrangler as wr
 
-from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_GLUE_TABLE, AWS_GLUE_DB, boto3_session
+from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_GLUE_DB, boto3_session
 
 
 def clean_name(x, illegal_symbols="'$@#^(%*)._ ", append_with=None):
@@ -87,9 +87,12 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
         wr.s3.to_parquet(df, f"s3://{S3_BUCKET}/data/{file_name}.parquet", boto3_session=boto3_session)
         # Upload the data to a dataset in S3 as well
         print('Uploading data to parquet dataset')
-        wr.s3.to_parquet(df, path=f's3://{S3_BUCKET}/datasets/', dataset=True, database=AWS_GLUE_DB,
-                         table=AWS_GLUE_TABLE, dtype=SCHEMA_COLUMNS, mode=mode, boto3_session=boto3_session,
-                         partition_cols=partition_cols)
+        table = f'betfair_{str(type).lower()}_prices'
+        wr.s3.to_parquet(
+            df, path=f's3://{S3_BUCKET}/{str(type).lower()}_price_datasets/',
+            dataset=True, database=AWS_GLUE_DB, table=table, dtype=SCHEMA_COLUMNS,
+            mode=mode, boto3_session=boto3_session, partition_cols=partition_cols
+        )
         print('Uploading complete')
     else:
         print('df returned no rows')
