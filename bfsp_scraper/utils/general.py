@@ -68,7 +68,8 @@ def try_again(wait_seconds=1, retries=3):
 @try_again()
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
-    df = pd.read_csv(link)
+    storage_options = {'User-Agent': 'Mozilla/5.0'}
+    df = pd.read_csv(link, storage_options=storage_options)
     if len(df) > 0:
         # Clean up data columns
         df.columns = [col.lower() for col in list(df.columns)]
