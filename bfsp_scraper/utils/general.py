@@ -71,6 +71,7 @@ def try_again(wait_seconds=1, retries=3):
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
     urlData = requests.get(link).content
+    print(f"Success: content: {urlData}")
     df = pd.read_csv(io.StringIO(urlData.decode('utf-8')))
     print(f"Success: {df}")
 
