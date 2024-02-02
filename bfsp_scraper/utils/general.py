@@ -72,6 +72,7 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
     print(f'Trying to download link: {link}')
     urlData = requests.get(link).content
     df = pd.read_csv(io.StringIO(urlData.decode('utf-8')))
+    print(f"Success: {df}")
 
     if len(df) > 0:
         # Clean up data columns
