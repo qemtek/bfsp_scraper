@@ -3,7 +3,7 @@ jobs:
   build-and-scrape:
     working_directory: ~/project
     docker:
-      - image: circleci/python:3.7.2
+      - image: cimg/python:3.8.18
     steps:
       - checkout
       - restore_cache:
