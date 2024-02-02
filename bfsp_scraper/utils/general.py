@@ -1,10 +1,12 @@
 import os
 import errno
 import time
-import requests
 import io
 import pandas as pd
 import awswrangler as wr
+import requests
+
+from bs4 import BeautifulSoup
 
 from bfsp_scraper.settings import SCHEMA_COLUMNS, S3_BUCKET, AWS_GLUE_DB, boto3_session
 
@@ -67,10 +69,38 @@ def try_again(wait_seconds=1, retries=3):
     return decorator
 
 
+def fetch_uk_proxies():
+    url = 'https://free-proxy-list.net/uk-proxy.html'
+    headers = {
+        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+
+    response = requests.get(url, headers=headers)
+    soup = BeautifulSoup(response.text, 'html.parser')
+
+    # Assuming the IP addresses are contained within a table
+    # Note: The website structure might change, so this could need an update
+    table = soup.find('table', 'table table-striped table-bordered')
+    trs = table.find_all('tr')
+    ip_addresses = list()
+    for res in trs[1:]:
+        ip_address = res.next.next
+        port = res.next.next.next.next
+        ip_addresses.append(f"{ip_address}:{port}")
+    return ip_addresses
+
+
+
 @try_again()
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
-    urlData = requests.get(link).content
+    proxies = fetch_uk_proxies()
+    proxyDict = {
+        "http": f'http://{proxies[0]}',
+        "https": f'https://{proxies[0]}',
+        "ftp": f'ftp://{proxies[0]}',
+    }
+    print(f"Using proxy {proxyDict['http']}")
+    urlData = requests.get(link, proxies=proxyDict).content
     print(f"Success: content: {urlData}")
     df = pd.read_csv(io.StringIO(urlData.decode('utf-8')))
     print(f"Success: {df}")
