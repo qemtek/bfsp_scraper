@@ -5,6 +5,7 @@ import io
 import pandas as pd
 import awswrangler as wr
 import requests
+import random
 
 from bs4 import BeautifulSoup
 
@@ -94,13 +95,15 @@ def fetch_uk_proxies():
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
     proxies = fetch_uk_proxies()
+    proxy = random.sample(proxies, 1)[0]
     proxyDict = {
-        "http": f'http://{proxies[0]}',
-        "https": f'https://{proxies[0]}',
-        "ftp": f'ftp://{proxies[0]}',
+        "http": f'http://{proxy}',
+        "https": f'https://{proxy}',
+        "ftp": f'ftp://{proxy}',
     }
     print(f"Using proxy {proxyDict['http']}")
-    urlData = requests.get(link, proxies=proxyDict).content
+    s = requests.Session()
+    urlData = s.get(link, proxies=proxyDict).content
     print(f"Success: content: {urlData}")
     df = pd.read_csv(io.StringIO(urlData.decode('utf-8')))
     print(f"Success: {df}")
