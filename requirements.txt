@@ -2,6 +2,7 @@ awswrangler
 boto3
 pandas
 apscheduler
+requests
 # Testing
 pytest
 pytest-timeout

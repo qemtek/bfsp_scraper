@@ -1,6 +1,8 @@
 import os
 import errno
 import time
+import requests
+import io
 import pandas as pd
 import awswrangler as wr
 
@@ -68,11 +70,9 @@ def try_again(wait_seconds=1, retries=3):
 @try_again()
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
-    storage_options = {
-        'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
-        'Referer': 'https://promo.betfair.com/betfairsp/prices'
-    }
-    df = pd.read_csv(link, storage_options=storage_options)
+    urlData = requests.get(link).content
+    df = pd.read_csv(io.StringIO(urlData.decode('utf-8')))
+
     if len(df) > 0:
         # Clean up data columns
         df.columns = [col.lower() for col in list(df.columns)]
