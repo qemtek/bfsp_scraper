@@ -3,6 +3,7 @@ boto3
 pandas
 apscheduler
 requests
+bs4
 # Testing
 pytest
 pytest-timeout
