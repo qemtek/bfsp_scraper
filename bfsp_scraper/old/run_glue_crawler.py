@@ -6,7 +6,7 @@ import sys
 mode = 'overwrite'  #sys.argv[1]
 print(f"Mode (overwrite/append): {mode}")
 
-from bfsp_scraper.settings import S3_BUCKET, AWS_GLUE_DB, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from bfsp_scraper.settings import S3_BUCKET, AWS_GLUE_DB
 
 session = boto3.session.Session(
     aws_access_key_id=AWS_ACCESS_KEY_ID,

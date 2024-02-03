@@ -94,18 +94,7 @@ def fetch_uk_proxies():
 @try_again()
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
-    proxies = fetch_uk_proxies()
-    proxy = random.sample(proxies, 1)[0]
-    proxyDict = {
-        "http": f'http://{proxy}',
-        "https": f'https://{proxy}',
-        "ftp": f'ftp://{proxy}',
-    }
-    print(f"Using proxy {proxyDict['http']}")
-    s = requests.Session()
-    urlData = s.get(link, proxies=proxyDict).content
-    print(f"Success: content: {urlData}")
-    df = pd.read_csv(io.StringIO(urlData.decode('utf-8')))
+    df = pd.read_csv(link)
     print(f"Success: {df}")
 
     if len(df) > 0:

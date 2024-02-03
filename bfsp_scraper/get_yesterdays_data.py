@@ -3,19 +3,16 @@ import time
 import os
 import datetime as dt
 import awswrangler as wr
-import boto3
 
 from bfsp_scraper.utils.general import download_sp_from_link
-from bfsp_scraper.settings import S3_BUCKET, AWS_ACCESS_KEY_ID, AWS_SECRET_ACCESS_KEY
+from bfsp_scraper.settings import S3_BUCKET, boto3_session
 
 use_files_in_s3 = True
 
 if use_files_in_s3:
     # Get a list of all files in S3 currently
-    session = boto3.session.Session(aws_access_key_id=AWS_ACCESS_KEY_ID,
-                                    aws_secret_access_key=AWS_SECRET_ACCESS_KEY)
     folder_dir = f's3://{S3_BUCKET}/data/'
-    files = wr.s3.list_objects(folder_dir, boto3_session=session)
+    files = wr.s3.list_objects(folder_dir, boto3_session=boto3_session)
     file_names = [f.split(folder_dir)[1] for f in files]
 else:
     file_names = []
