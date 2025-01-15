@@ -50,4 +50,4 @@ for country in countries:
                         day=this_day, month=this_month, year=this_year,
                         mode='append')  # , partition_cols=['year']
             except Exception as e:
-                print(f"Couldnt get data for link: {link}")
+                print(f"Couldn't get data for link: {link}")

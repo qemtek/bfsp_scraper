@@ -90,7 +90,6 @@ def fetch_uk_proxies():
     return ip_addresses
 
 
-
 @try_again()
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')

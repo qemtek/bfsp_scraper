@@ -8,7 +8,7 @@ from settings import boto3_session
 DATABASE = 'finish-time-predict'
 
 # Get the date range we are interested in
-d1 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=365*2))
+d1 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=15))
 d2 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=1))
 dd = [(d1 + dt.timedelta(days=x)).date() for x in range((d2-d1).days + 1)]
 
@@ -29,7 +29,7 @@ for country in ['gb', 'ire']:
         this_day = str(date.day).zfill(2)
         for type in ['win', 'place']:
             link = f"https://promo.betfair.com/betfairsp/prices/" \
-                   f"dwbfprices{country}{type}{this_day}{this_month}{this_year}.csv"
+                   f"dwbfprices{'uk' if country == 'gb' else country}{type}{this_day}{this_month}{this_year}.csv"
             download_sp_from_link(
                 link=link, country=country, type=type,
                 day=this_day, month=this_month, year=this_year,
