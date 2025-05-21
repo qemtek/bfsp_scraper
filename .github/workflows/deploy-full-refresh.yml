@@ -8,6 +8,7 @@ on:
       - 'Dockerfile.full-refresh'
       - '.aws/full-refresh.json'
       - '.github/workflows/deploy-full-refresh.yml'
+      - 'requirements.txt'
 
 env:
   AWS_REGION: eu-west-1
