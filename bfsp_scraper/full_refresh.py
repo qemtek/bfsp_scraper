@@ -112,7 +112,7 @@ def main():
 
     today = dt.datetime.today().date()
     this_year = today.year
-    start_year = today.year - 10
+    start_year = 2008
     years = list(range(start_year, this_year + 1))
 
     types = [x.lower() for x in os.environ['TYPES'].split(',')]
