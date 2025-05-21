@@ -5,11 +5,11 @@ on:
     branches:
       - master
     paths:
-      - 'bfsp_scraper/full_refresh.py'
       - 'Dockerfile.full-refresh'
       - '.aws/full-refresh.json'
       - '.github/workflows/deploy-full-refresh.yml'
       - 'requirements.txt'
+      - 'bfsp_scraper/*'
 
 env:
   AWS_REGION: eu-west-1
