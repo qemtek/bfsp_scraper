@@ -3,7 +3,7 @@ name: Deploy Full Refresh to ECR
 on:
   push:
     branches:
-      - main
+      - master
     paths:
       - 'bfsp_scraper/full_refresh.py'
       - 'Dockerfile.full-refresh'
@@ -14,7 +14,7 @@ on:
 env:
   AWS_REGION: eu-west-1
   ECR_REPOSITORY: bfsp_scraper/full-refresh
-  ECS_CLUSTER: horse-racing-trader  # Add your cluster name here
+  ECS_CLUSTER: horse-racing-trader
   TASK_DEFINITION: .aws/full-refresh.json
 
 jobs:
