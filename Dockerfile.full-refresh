@@ -1,0 +1,31 @@
+FROM python:3.8-slim-buster
+
+# Install system dependencies
+RUN apt-get update && \
+    apt-get install -y --no-install-recommends \
+    gcc \
+    build-essential && \
+    rm -rf /var/lib/apt/lists/*
+
+# Upgrade pip
+RUN pip install --upgrade pip
+
+# Set working directory
+WORKDIR /app
+
+# Copy requirements first to leverage Docker cache
+COPY requirements.txt .
+RUN pip install -r requirements.txt
+
+# Copy the application code
+COPY bfsp_scraper /app/bfsp_scraper
+
+# Set environment variables
+ENV COUNTRIES='uk,ire' \
+    TYPES='win,place' \
+    S3_BUCKET='betfair-sp' \
+    PROJECT_DIR=/app \
+    PYTHONPATH=/app
+
+# Run the full refresh script
+CMD ["python", "-m", "bfsp_scraper.full_refresh"]

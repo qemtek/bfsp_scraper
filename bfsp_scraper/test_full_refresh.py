@@ -1,4 +1,4 @@
-# Download all files from Betfair's website and upload them to an S3 bucket
+# Test version of full_refresh.py for a single date
 
 import pandas as pd
 import time
@@ -99,21 +99,24 @@ def generate_report(stats: Dict) -> str:
     return "\n".join(report)
 
 def main():
-    logger.info("Starting full refresh process")
+    logger.info("Starting test refresh process for yesterday's data")
     
+    # Get yesterday's date
+    yesterday = dt.datetime.today().date() - dt.timedelta(days=1)
+    year = str(yesterday.year)
+    month = str(yesterday.month).zfill(2)
+    day = str(yesterday.day).zfill(2)
+    
+    logger.info(f"Processing data for date: {year}-{month}-{day}")
+    
+    # Check if files already exist
     files = list_files(bucket=S3_BUCKET, prefix='data', session=boto3_session)
-    # Remove folder name from the list of returned objects
     if len(files) > 1:
         files = files[1:]
         file_names = [f.get('Key').split('data/')[1] for f in files
                     if len(f.get('Key').split('data/')) > 1]
     else:
         file_names = []
-
-    today = dt.datetime.today().date()
-    this_year = today.year
-    start_year = today.year - 10
-    years = list(range(start_year, this_year + 1))
 
     types = [x.lower() for x in os.environ['TYPES'].split(',')]
     countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
@@ -125,36 +128,30 @@ def main():
             'failed': manager.list()
         })
         
-        # Create a list of all download tasks
+        # Create tasks only for yesterday's date
         tasks = []
         table_refreshed = True  # Set to false to refresh
 
         for country in countries:
             for type_ in types:
-                for year in years:
-                    for month in range(1, 13):
-                        days = monthrange(year, month)[1]
-                        for day in range(1, days + 1):
-                            filename = f"{type_}{country}{year}{str(month).zfill(2)}{str(day).zfill(2)}.json"
-                            if filename in file_names:
-                                logger.debug(f"{type_}{country}{year}{month}{day} exists in S3, skipping")
-                                continue
-                                
-                            if dt.datetime(year=int(year), month=int(month), day=int(day)) > dt.datetime.today():
-                                continue
+                filename = f"{type_}{country}{year}{month}{day}.json"
+                if filename in file_names:
+                    logger.info(f"{type_}{country}{year}{month}{day} exists in S3, skipping")
+                    continue
 
-                            day_str = str(day).zfill(2)
-                            month_str = str(month).zfill(2)
-                            
-                            link = (f"https://promo.betfair.com/betfairsp/prices/"
-                                   f"dwbfprices{country}{type_}{day_str}{month_str}{year}.csv")
-                            
-                            tasks.append((link, country, type_, day_str, month_str, str(year), table_refreshed, shared_stats))
-                            table_refreshed = True
+                link = (f"https://promo.betfair.com/betfairsp/prices/"
+                       f"dwbfprices{country}{type_}{day}{month}{year}.csv")
+                
+                tasks.append((link, country, type_, day, month, year, table_refreshed, shared_stats))
+                table_refreshed = True
+
+        if not tasks:
+            logger.info("No files to process - all files for yesterday already exist")
+            return
 
         # Use multiprocessing to execute the downloads
-        num_processes = min(cpu_count(), 8)  # Allow up to 8 processes since we have 8 cores allocated
-        logger.info(f"Starting downloads using {num_processes} processes")
+        num_processes = min(cpu_count(), len(tasks))  # Use only as many processes as we have tasks
+        logger.info(f"Starting downloads using {num_processes} processes for {len(tasks)} tasks")
         
         with Pool(processes=num_processes) as pool:
             pool.map(worker, tasks)
@@ -166,7 +163,7 @@ def main():
         # Save report to S3
         try:
             report_date = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_key = f"reports/full_refresh_{report_date}.txt"
+            report_key = f"reports/test_refresh_{report_date}.txt"
             s3 = boto3_session.client('s3')
             s3.put_object(
                 Bucket=S3_BUCKET,

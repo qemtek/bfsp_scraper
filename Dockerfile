@@ -12,7 +12,7 @@ COPY bfsp_scraper /bfsp_scraper
 
 RUN pip3 install -r requirements.txt
 
-ENV COUNTRIES='uk,ire,usa,aus'
+ENV COUNTRIES='uk,ire,fr'
 ENV TYPES='win,place'
 ENV S3_BUCKET='betfair-sp'
 ENV AWS_GLUE_DB='finish-time-predict'

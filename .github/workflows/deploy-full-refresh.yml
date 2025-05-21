@@ -1,0 +1,69 @@
+name: Deploy Full Refresh to ECR
+
+on:
+  push:
+    branches: [ main ]
+    paths:
+      - 'bfsp_scraper/full_refresh.py'
+      - 'Dockerfile.full-refresh'
+      - '.aws/full-refresh.json'
+      - '.github/workflows/deploy-full-refresh.yml'
+
+env:
+  AWS_REGION: eu-west-1
+  ECR_REPOSITORY: bfsp_scraper/full-refresh
+  ECS_CLUSTER: horse-racing-trader  # Add your cluster name here
+  TASK_DEFINITION: .aws/full-refresh.json
+
+jobs:
+  deploy:
+    name: Deploy
+    runs-on: ubuntu-latest
+    environment: production
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v2
+
+    - name: Configure AWS credentials
+      uses: aws-actions/configure-aws-credentials@v1
+      with:
+        aws-access-key-id: ${{ secrets.AWS_ACCESS_KEY_ID }}
+        aws-secret-access-key: ${{ secrets.AWS_SECRET_ACCESS_KEY }}
+        aws-region: ${{ env.AWS_REGION }}
+
+    - name: Login to Amazon ECR
+      id: login-ecr
+      uses: aws-actions/amazon-ecr-login@v1
+
+    - name: Build, tag, and push image to Amazon ECR
+      env:
+        ECR_REGISTRY: ${{ steps.login-ecr.outputs.registry }}
+        IMAGE_TAG: ${{ github.sha }}
+      run: |
+        docker build -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG -t $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest -f Dockerfile.full-refresh .
+        docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:$IMAGE_TAG
+        docker push $ECR_REGISTRY/${{ env.ECR_REPOSITORY }}:latest
+
+    - name: Create CloudWatch log group if not exists
+      run: |
+        LOG_GROUP="/ecs/full-refresh"
+        if ! aws logs describe-log-groups --log-group-name-prefix "$LOG_GROUP" | grep -q "$LOG_GROUP"; then
+          echo "Creating log group $LOG_GROUP"
+          aws logs create-log-group --log-group-name "$LOG_GROUP"
+          # Set retention policy to 30 days to manage costs
+          aws logs put-retention-policy --log-group-name "$LOG_GROUP" --retention-in-days 30
+        else
+          echo "Log group $LOG_GROUP already exists"
+        fi
+
+    - name: Update ECS task definition
+      run: |
+        aws ecs register-task-definition --cli-input-json file://${{ env.TASK_DEFINITION }}
+
+    - name: Deploy to ECS
+      run: |
+        aws ecs update-service \
+          --cluster ${{ env.ECS_CLUSTER }} \
+          --task-definition full-refresh \
+          --force-new-deployment

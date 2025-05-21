@@ -118,7 +118,7 @@ def main():
                         help='Start date of races in YYYY-MM-DD format')
     parser.add_argument('--end-date', type=str, required=True,
                         help='End date of races in YYYY-MM-DD format')
-    parser.add_argument('--countries', type=str, nargs='+', choices=['gb', 'ire'], default=['gb', 'ire'],
+    parser.add_argument('--countries', type=str, nargs='+', choices=['gb', 'ire', 'fr'], default=['gb', 'ire', 'fr'],
                         help='Country codes to process. Defaults to both gb and ire')
     parser.add_argument('--force', action='store_true',
                         help='Skip confirmation prompt')

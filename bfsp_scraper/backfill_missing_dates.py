@@ -8,8 +8,10 @@ from settings import boto3_session
 DATABASE = 'finish-time-predict'
 
 # Get the date range we are interested in
-d1 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=15))
-d2 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=1))
+# d1 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=15))
+# d2 = pd.to_datetime(dt.datetime.today().date() - dt.timedelta(days=1))
+d1 = pd.to_datetime('2025-01-01')
+d2 = pd.to_datetime('2025-04-27')
 dd = [(d1 + dt.timedelta(days=x)).date() for x in range((d2-d1).days + 1)]
 
 df = wr.athena.read_sql_query(
@@ -20,7 +22,7 @@ df = wr.athena.read_sql_query(
 df['event_dt'] = df['event_dt'].apply(lambda x: x.date())
 df = df.drop_duplicates()
 
-for country in ['gb', 'ire']:
+for country in ['fr']:
     dates = list(set(df[df['country'] == country]['event_dt']))
     missing_dates = [d for d in dd if d not in dates]
     for date in missing_dates:
@@ -35,5 +37,4 @@ for country in ['gb', 'ire']:
                 day=this_day, month=this_month, year=this_year,
                 mode='append'
             )
-
 
