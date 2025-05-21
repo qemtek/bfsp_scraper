@@ -2,7 +2,8 @@ name: Deploy Full Refresh to ECR
 
 on:
   push:
-    branches: [ main ]
+    branches:
+      - main
     paths:
       - 'bfsp_scraper/full_refresh.py'
       - 'Dockerfile.full-refresh'
