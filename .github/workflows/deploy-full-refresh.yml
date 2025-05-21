@@ -62,10 +62,3 @@ jobs:
     - name: Update ECS task definition
       run: |
         aws ecs register-task-definition --cli-input-json file://${{ env.TASK_DEFINITION }}
-
-    - name: Deploy to ECS
-      run: |
-        aws ecs update-service \
-          --cluster ${{ env.ECS_CLUSTER }} \
-          --task-definition full-refresh \
-          --force-new-deployment
