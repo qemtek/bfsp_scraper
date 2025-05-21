@@ -32,7 +32,7 @@ SCHEMA_COLUMNS = {
 PROJECT_DIR = str(pathlib.Path(bfsp_scraper.__file__).resolve().parent).replace('\\', '/')
 S3_BUCKET = get_attribute('S3_BUCKET')
 
-AWS_GLUE_DB = get_attribute('AWS_GLUE_DB')
+AWS_GLUE_DB = 'finish-time-predict'
 
 TYPES = get_attribute('TYPES')
 COUNTRIES = get_attribute('COUNTRIES')
