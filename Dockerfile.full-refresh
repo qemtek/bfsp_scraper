@@ -28,4 +28,4 @@ ENV COUNTRIES='uk,ire' \
     PYTHONPATH=/app
 
 # Run the full refresh script
-CMD ["python", "-m", "bfsp_scraper.full_refresh"]
+CMD ["python", "-m", "bfsp_scraper.download_batch_data"]

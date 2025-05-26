@@ -11,6 +11,7 @@ from typing import Tuple, Dict, List
 import logging
 import json
 from collections import defaultdict
+import sys
 
 from bfsp_scraper.utils.general import download_sp_from_link
 from bfsp_scraper.utils.s3_tools import list_files
@@ -26,9 +27,9 @@ logger = logging.getLogger(__name__)
 # Define the number of threads to use
 MAX_THREADS = 2
 
-def worker(params: Tuple[str, str, str, str, str, str, bool, Dict, threading.Lock, threading.Lock]) -> None:
+def worker(params: Tuple[str, str, str, str, str, str, Dict, threading.Lock, threading.Lock]) -> None:
     """Worker function to download and process a single file."""
-    link, country, type_, day, month, year, table_refreshed, shared_stats, success_lock, failure_lock = params
+    link, country, type_, day, month, year, shared_stats, success_lock, failure_lock = params
     try:
         logger.info(f"Processing {year}/{month}/{day}/{type_}/{country}")
         download_sp_from_link(
@@ -37,8 +38,7 @@ def worker(params: Tuple[str, str, str, str, str, str, bool, Dict, threading.Loc
             type=type_,
             day=day,
             month=month,
-            year=year,
-            mode='overwrite' if not table_refreshed else 'append'
+            year=year
         )
         # Update success stats (thread-safe)
         with success_lock:
@@ -60,6 +60,9 @@ def worker(params: Tuple[str, str, str, str, str, str, bool, Dict, threading.Loc
                 'link': link,
                 'error': error_msg
             })
+    finally:
+        # Add a 1-second delay after each task processing, regardless of success or failure
+        time.sleep(1)
 
 def generate_report(stats: Dict) -> str:
     """Generate a detailed report of the download process."""
@@ -106,6 +109,40 @@ def generate_report(stats: Dict) -> str:
 
 def main():
     logger.info("Starting full refresh process")
+
+    # --- Environment Variable Handling ---
+    start_date_str = os.environ.get('START_DATE', '2025-04-01')
+    end_date_str = os.environ.get('END_DATE', '2025-05-31')
+    types_str = os.environ.get('TYPES', 'win/place')
+    countries_str = os.environ.get('COUNTRIES', 'gb,ire,fr')
+
+    missing_vars = []
+    if not start_date_str: missing_vars.append('START_DATE')
+    if not end_date_str: missing_vars.append('END_DATE')
+    if not types_str: missing_vars.append('TYPES')
+    if not countries_str: missing_vars.append('COUNTRIES')
+
+    if missing_vars:
+        logger.error(f"Missing mandatory environment variables: {', '.join(missing_vars)}")
+        logger.error("Please set START_DATE (YYYY-MM-DD), END_DATE (YYYY-MM-DD), TYPES (comma-separated), and COUNTRIES (comma-separated).")
+        sys.exit(1)
+
+    try:
+        start_date = dt.datetime.strptime(start_date_str, "%Y-%m-%d").date()
+        end_date = dt.datetime.strptime(end_date_str, "%Y-%m-%d").date()
+    except ValueError as e:
+        logger.error(f"Invalid date format for START_DATE or END_DATE. Expected YYYY-MM-DD. Error: {e}")
+        sys.exit(1)
+
+    if start_date > end_date:
+        logger.error(f"START_DATE ({start_date_str}) cannot be after END_DATE ({end_date_str}).")
+        sys.exit(1)
+
+    types = [x.lower().strip() for x in types_str.split(',')]
+    countries = [x.lower().strip() for x in countries_str.split(',')]
+
+    logger.info(f"Processing data for START_DATE: {start_date_str}, END_DATE: {end_date_str}")
+    logger.info(f"Processing TYPES: {types}, COUNTRIES: {countries}")
     
     files = list_files(bucket=S3_BUCKET, prefix='data', session=boto3_session)
     # Remove folder name from the list of returned objects
@@ -116,13 +153,7 @@ def main():
     else:
         file_names = []
 
-    today = dt.datetime.today().date()
-    this_year = today.year
-    start_year = 2008
-    years = list(range(start_year, this_year + 1))
-
-    types = [x.lower() for x in os.environ['TYPES'].split(',')]
-    countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
+    today_date = dt.date.today()
 
     # Use a regular dictionary for shared_stats and locks for thread-safe appends
     shared_stats = {
@@ -134,30 +165,33 @@ def main():
         
     # Create a list of all download tasks
     tasks = []
-    table_refreshed = True  # Set to false to refresh
+
+    # Generate date range using pandas
+    date_range_to_process = pd.date_range(start=start_date, end=end_date, freq='D')
 
     for country in countries:
         for type_ in types:
-            for year in years:
-                for month in range(1, 13):
-                    days = monthrange(year, month)[1]
-                    for day in range(1, days + 1):
-                        filename = f"{type_}{country}{year}{str(month).zfill(2)}{str(day).zfill(2)}.json"
-                        if filename in file_names:
-                            logger.debug(f"{type_}{country}{year}{month}{day} exists in S3, skipping")
-                            continue
-                                
-                        if dt.datetime(year=int(year), month=int(month), day=int(day)) > dt.datetime.today():
-                            continue
+            for current_processing_date_dt in date_range_to_process:
+                current_processing_date = current_processing_date_dt.date() # Convert pandas Timestamp to datetime.date
+                
+                year = current_processing_date.year
+                month_str = str(current_processing_date.month).zfill(2)
+                day_str = str(current_processing_date.day).zfill(2)
 
-                        day_str = str(day).zfill(2)
-                        month_str = str(month).zfill(2)
+                filename_s3_check = f"{type_}{country}{year}{month_str}{day_str}.parquet"
+
+                if filename_s3_check in file_names:
+                    logger.debug(f"{type_}{country}{year}{month_str}{day_str} (as {filename_s3_check}) exists in S3, skipping")
+                    continue
+                                
+                if current_processing_date > today_date:
+                    logger.debug(f"Date {current_processing_date} is in the future, skipping")
+                    continue
                             
-                        link = (f"https://promo.betfair.com/betfairsp/prices/"
-                               f"dwbfprices{country}{type_}{day_str}{month_str}{year}.csv")
+                link = (f"https://promo.betfair.com/betfairsp/prices/"
+                       f"dwbfprices{country}{type_}{day_str}{month_str}{year}.csv")
                             
-                        tasks.append((link, country, type_, day_str, month_str, str(year), table_refreshed, shared_stats, success_lock, failure_lock))
-                        table_refreshed = True # This ensures subsequent tasks use 'append' if the first was 'overwrite'
+                tasks.append((link, country, type_, day_str, month_str, str(year), shared_stats, success_lock, failure_lock))
 
     # Use ThreadPoolExecutor to execute the downloads
     logger.info(f"Starting downloads using {MAX_THREADS} threads")
