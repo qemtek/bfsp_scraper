@@ -46,7 +46,7 @@ def safe_open(dir_path, type):
     return open(dir_path, type)
 
 
-def try_again(initial_wait_seconds=1, max_retries=5, backoff_factor=2):
+def try_again(initial_wait_seconds=1, max_retries=5, backoff_factor=1):
     """A decorator function that retries a function with exponential backoff
     if it fails."""
     def decorator(func):
@@ -98,7 +98,7 @@ def fetch_uk_proxies():
     return ip_addresses
 
 
-@try_again(initial_wait_seconds=5, max_retries=5, backoff_factor=2)
+@try_again(initial_wait_seconds=1, max_retries=5, backoff_factor=1)
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
     df = pd.read_csv(link)
