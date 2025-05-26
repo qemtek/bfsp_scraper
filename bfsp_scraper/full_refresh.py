@@ -24,7 +24,7 @@ logging.basicConfig(
 logger = logging.getLogger(__name__)
 
 # Define the number of threads to use
-MAX_THREADS = 4
+MAX_THREADS = 2
 
 def worker(params: Tuple[str, str, str, str, str, str, bool, Dict, threading.Lock, threading.Lock]) -> None:
     """Worker function to download and process a single file."""

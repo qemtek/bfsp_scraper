@@ -46,7 +46,7 @@ def safe_open(dir_path, type):
     return open(dir_path, type)
 
 
-def try_again(initial_wait_seconds=5, max_retries=5, backoff_factor=2):
+def try_again(initial_wait_seconds=1, max_retries=5, backoff_factor=2):
     """A decorator function that retries a function with exponential backoff
     if it fails."""
     def decorator(func):
