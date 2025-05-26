@@ -114,9 +114,9 @@ def regenerate_data(race_start_date, race_end_date, country):
 
 def main():
     parser = argparse.ArgumentParser(description='Regenerate Betfair SP data for a specific date range')
-    parser.add_argument('--start-date', type=str, required=True, 
+    parser.add_argument('--start-date', type=str, default='2025-05-11',
                         help='Start date of races in YYYY-MM-DD format')
-    parser.add_argument('--end-date', type=str, required=True,
+    parser.add_argument('--end-date', type=str, default='2025-05-14',
                         help='End date of races in YYYY-MM-DD format')
     parser.add_argument('--countries', type=str, nargs='+', choices=['gb', 'ire', 'fr'], default=['gb', 'ire', 'fr'],
                         help='Country codes to process. Defaults to both gb and ire')

@@ -99,6 +99,7 @@ def download_sp_from_link(link, country, type, day, month, year, mode='append', 
     if len(df) > 0:
         # Clean up data columns
         df.columns = [col.lower() for col in list(df.columns)]
+        df['event_id'] = df['event_id'].astype(int)
         df['country'] = country
         df['type'] = type
         df['event_dt'] = pd.to_datetime(df['event_dt'], format="%d-%m-%Y %H:%M")
