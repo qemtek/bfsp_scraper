@@ -43,14 +43,14 @@ def main():
         "LAUNCHER_START_DATE": "2008-01-01",
         "LAUNCHER_END_DATE": todays_date,
         "LAUNCHER_TYPES": "win,place",
-        "LAUNCHER_COUNTRIES": "gb,ire,fr",
-        "LAUNCHER_CLUSTER_NAME": "finish-time-predict",
+        "LAUNCHER_COUNTRIES": "gb,ire,fr,usa",
+        "LAUNCHER_CLUSTER_NAME": "horse-racing-trader",
         "LAUNCHER_SUBNETS": "subnet-7ff27625",
-        "LAUNCHER_TASK_DEFINITION_FAMILY": "full_refresh",
+        "LAUNCHER_TASK_DEFINITION_FAMILY": "full-refresh",
         "LAUNCHER_GLUE_DATABASE_NAME": AWS_GLUE_DB,
         "LAUNCHER_S3_BUCKET_NAME": S3_BUCKET,
         "LAUNCHER_TASK_ROLE_ARN": "ecs-service-role",
-        "LAUNCHER_BATCH_SIZE_DAYS": "10",
+        "LAUNCHER_BATCH_SIZE_DAYS": "365",
         "LAUNCHER_ASSIGN_PUBLIC_IP": "ENABLED",
         "LAUNCHER_LAUNCH_TYPE": "FARGATE"
     }
@@ -169,12 +169,13 @@ def main():
         network_config = {"awsvpcConfiguration": awsvpc_config}
 
         # Prepare environment variable overrides
-        # Create a deep copy of the original environment to avoid modifying it across iterations
-        # Assuming the first container definition is the one we want to modify
-        original_env = task_definition_base['containerDefinitions'][0].get('environment', [])
-        env_overrides = copy.deepcopy(original_env)
+        # The container name is assumed/known for the given task definition family.
+        container_name_to_override = "full-refresh"
 
-        # Update or add our specific environment variables
+        # These are the environment variables we will explicitly set or override.
+        # Other environment variables defined in the base task definition will still be present.
+        env_overrides_list = [] 
+
         vars_to_set = {
             "START_DATE": batch_start_str,
             "END_DATE": batch_end_str,
@@ -182,18 +183,12 @@ def main():
             "COUNTRIES": config["countries"]
         }
 
-        # Create a dictionary of existing env var names for quick lookup
-        existing_env_names = {item['name']: item for item in env_overrides}
-
         for name, value in vars_to_set.items():
-            if name in existing_env_names:
-                existing_env_names[name]['value'] = value
-            else:
-                env_overrides.append({'name': name, 'value': value})
+            env_overrides_list.append({'name': name, 'value': value})
         
         container_override = {
-            'name': task_definition_base['containerDefinitions'][0]['name'], # Use the name from the task def
-            'environment': env_overrides
+            'name': container_name_to_override, 
+            'environment': env_overrides_list
         }
 
         try:
@@ -204,7 +199,6 @@ def main():
                 platformVersion='LATEST', # For Fargate
                 launchType=config["launch_type"],
                 networkConfiguration=network_config,
-                taskRoleArn=config["task_role_arn"], # Top-level parameter
                 overrides={
                     'containerOverrides': [container_override]
                 },
