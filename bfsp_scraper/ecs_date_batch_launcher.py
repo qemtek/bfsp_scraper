@@ -43,7 +43,7 @@ def main():
         "LAUNCHER_START_DATE": "2008-01-01",
         "LAUNCHER_END_DATE": todays_date,
         "LAUNCHER_TYPES": "win,place",
-        "LAUNCHER_COUNTRIES": "gb,ire,fr,usa",
+        "LAUNCHER_COUNTRIES": "uk,ire,fr,usa",
         "LAUNCHER_CLUSTER_NAME": "horse-racing-trader",
         "LAUNCHER_SUBNETS": "subnet-7ff27625",
         "LAUNCHER_TASK_DEFINITION_FAMILY": "full-refresh",

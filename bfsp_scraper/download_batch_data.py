@@ -114,7 +114,7 @@ def main():
     start_date_str = os.environ.get('START_DATE', '2025-04-01')
     end_date_str = os.environ.get('END_DATE', '2025-05-31')
     types_str = os.environ.get('TYPES', 'win/place')
-    countries_str = os.environ.get('COUNTRIES', 'gb,ire,fr')
+    countries_str = os.environ.get('COUNTRIES', 'uk,ire,fr')
 
     missing_vars = []
     if not start_date_str: missing_vars.append('START_DATE')
