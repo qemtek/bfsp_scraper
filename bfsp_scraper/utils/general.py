@@ -46,26 +46,34 @@ def safe_open(dir_path, type):
     return open(dir_path, type)
 
 
-def try_again(wait_seconds=1, retries=3):
-    """A decorator function that retries a function after a
-    number of seconds if it fails"""
+def try_again(initial_wait_seconds=5, max_retries=5, backoff_factor=2):
+    """A decorator function that retries a function with exponential backoff
+    if it fails."""
     def decorator(func):
         def wrapper(*args, **kwargs):
-            try:
-                result = func(*args, **kwargs)
-                return result
-            except Exception as e:
-                print(f'{func.__name__} failed. retrying, error: ')
-                print(e)
-                for i in range(retries):
-                    try:
-                        time.sleep(wait_seconds)
-                        result = func(*args, **kwargs)
-                        return result
-                    except Exception as e:
-                        print(f'{func.__name__} failed. retrying, error: ')
-                        print(e)
-                        pass
+            last_exception = None
+            for attempt in range(max_retries):
+                try:
+                    result = func(*args, **kwargs)
+                    return result
+                except Exception as e:
+                    last_exception = e
+                    # Calculate wait time with exponential backoff and jitter
+                    wait_time = (initial_wait_seconds * (backoff_factor ** attempt)) + \
+                                random.uniform(0, initial_wait_seconds * 0.25) # Jitter up to 25% of initial wait
+                    
+                    if attempt < max_retries - 1:
+                        print(f'{func.__name__} failed (Attempt {attempt + 1}/{max_retries}). Retrying in {wait_time:.2f}s. Error: {e}')
+                        time.sleep(wait_time)
+                    else:
+                        print(f'{func.__name__} failed after {max_retries} attempts. Error: {e}')
+                        # Re-raise the last exception if all retries fail
+                        raise last_exception
+            # This part should ideally not be reached if an exception is always raised on final failure
+            # or a result is returned on success.
+            if last_exception: # Should have been raised already
+                raise last_exception
+            return None # Fallback, though logic implies it won't be hit if func always returns or raises
         return wrapper
     return decorator
 
@@ -90,7 +98,7 @@ def fetch_uk_proxies():
     return ip_addresses
 
 
-@try_again()
+@try_again(initial_wait_seconds=5, max_retries=5, backoff_factor=2)
 def download_sp_from_link(link, country, type, day, month, year, mode='append', partition_cols=None):
     print(f'Trying to download link: {link}')
     df = pd.read_csv(link)
