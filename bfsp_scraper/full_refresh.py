@@ -5,7 +5,8 @@ import time
 import os
 import datetime as dt
 from calendar import monthrange
-from multiprocessing import Pool, cpu_count, Manager
+from concurrent.futures import ThreadPoolExecutor
+import threading
 from typing import Tuple, Dict, List
 import logging
 import json
@@ -22,9 +23,12 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-def worker(params: Tuple[str, str, str, str, str, str, bool, Dict]) -> None:
+# Define the number of threads to use
+MAX_THREADS = 32
+
+def worker(params: Tuple[str, str, str, str, str, str, bool, Dict, threading.Lock, threading.Lock]) -> None:
     """Worker function to download and process a single file."""
-    link, country, type_, day, month, year, table_refreshed, shared_stats = params
+    link, country, type_, day, month, year, table_refreshed, shared_stats, success_lock, failure_lock = params
     try:
         logger.info(f"Processing {year}/{month}/{day}/{type_}/{country}")
         download_sp_from_link(
@@ -36,24 +40,26 @@ def worker(params: Tuple[str, str, str, str, str, str, bool, Dict]) -> None:
             year=year,
             mode='overwrite' if not table_refreshed else 'append'
         )
-        # Update success stats
-        shared_stats['successful'].append({
-            'country': country,
-            'type': type_,
-            'date': f"{year}-{month}-{day}",
-            'link': link
-        })
+        # Update success stats (thread-safe)
+        with success_lock:
+            shared_stats['successful'].append({
+                'country': country,
+                'type': type_,
+                'date': f"{year}-{month}-{day}",
+                'link': link
+            })
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Error processing {link}: {error_msg}")
-        # Update error stats
-        shared_stats['failed'].append({
-            'country': country,
-            'type': type_,
-            'date': f"{year}-{month}-{day}",
-            'link': link,
-            'error': error_msg
-        })
+        # Update error stats (thread-safe)
+        with failure_lock:
+            shared_stats['failed'].append({
+                'country': country,
+                'type': type_,
+                'date': f"{year}-{month}-{day}",
+                'link': link,
+                'error': error_msg
+            })
 
 def generate_report(stats: Dict) -> str:
     """Generate a detailed report of the download process."""
@@ -118,65 +124,66 @@ def main():
     types = [x.lower() for x in os.environ['TYPES'].split(',')]
     countries = [x.lower() for x in os.environ['COUNTRIES'].split(',')]
 
-    # Create a manager to share statistics between processes
-    with Manager() as manager:
-        shared_stats = manager.dict({
-            'successful': manager.list(),
-            'failed': manager.list()
-        })
+    # Use a regular dictionary for shared_stats and locks for thread-safe appends
+    shared_stats = {
+        'successful': [],
+        'failed': []
+    }
+    success_lock = threading.Lock()
+    failure_lock = threading.Lock()
         
-        # Create a list of all download tasks
-        tasks = []
-        table_refreshed = True  # Set to false to refresh
+    # Create a list of all download tasks
+    tasks = []
+    table_refreshed = True  # Set to false to refresh
 
-        for country in countries:
-            for type_ in types:
-                for year in years:
-                    for month in range(1, 13):
-                        days = monthrange(year, month)[1]
-                        for day in range(1, days + 1):
-                            filename = f"{type_}{country}{year}{str(month).zfill(2)}{str(day).zfill(2)}.json"
-                            if filename in file_names:
-                                logger.debug(f"{type_}{country}{year}{month}{day} exists in S3, skipping")
-                                continue
+    for country in countries:
+        for type_ in types:
+            for year in years:
+                for month in range(1, 13):
+                    days = monthrange(year, month)[1]
+                    for day in range(1, days + 1):
+                        filename = f"{type_}{country}{year}{str(month).zfill(2)}{str(day).zfill(2)}.json"
+                        if filename in file_names:
+                            logger.debug(f"{type_}{country}{year}{month}{day} exists in S3, skipping")
+                            continue
                                 
-                            if dt.datetime(year=int(year), month=int(month), day=int(day)) > dt.datetime.today():
-                                continue
+                        if dt.datetime(year=int(year), month=int(month), day=int(day)) > dt.datetime.today():
+                            continue
 
-                            day_str = str(day).zfill(2)
-                            month_str = str(month).zfill(2)
+                        day_str = str(day).zfill(2)
+                        month_str = str(month).zfill(2)
                             
-                            link = (f"https://promo.betfair.com/betfairsp/prices/"
-                                   f"dwbfprices{country}{type_}{day_str}{month_str}{year}.csv")
+                        link = (f"https://promo.betfair.com/betfairsp/prices/"
+                               f"dwbfprices{country}{type_}{day_str}{month_str}{year}.csv")
                             
-                            tasks.append((link, country, type_, day_str, month_str, str(year), table_refreshed, shared_stats))
-                            table_refreshed = True
+                        tasks.append((link, country, type_, day_str, month_str, str(year), table_refreshed, shared_stats, success_lock, failure_lock))
+                        table_refreshed = True # This ensures subsequent tasks use 'append' if the first was 'overwrite'
 
-        # Use multiprocessing to execute the downloads
-        num_processes = min(cpu_count(), 8)  # Allow up to 8 processes since we have 8 cores allocated
-        logger.info(f"Starting downloads using {num_processes} processes")
+    # Use ThreadPoolExecutor to execute the downloads
+    logger.info(f"Starting downloads using {MAX_THREADS} threads")
         
-        with Pool(processes=num_processes) as pool:
-            pool.map(worker, tasks)
+    with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
+        # map will pass each task tuple as a single argument to the worker function
+        list(executor.map(worker, tasks)) # list() to ensure all futures complete and exceptions are raised
         
-        # Generate and save the report
-        report = generate_report(dict(shared_stats))
-        logger.info("\n" + report)
+    # Generate and save the report
+    report = generate_report(shared_stats) # Pass the regular dict directly
+    logger.info("\n" + report)
         
-        # Save report to S3
-        try:
-            report_date = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
-            report_key = f"reports/full_refresh_{report_date}.txt"
-            s3 = boto3_session.client('s3')
-            s3.put_object(
-                Bucket=S3_BUCKET,
-                Key=report_key,
-                Body=report.encode('utf-8')
-            )
-            logger.info(f"Report saved to s3://{S3_BUCKET}/{report_key}")
-        except Exception as e:
-            logger.error(f"Failed to save report to S3: {e}")
-            logger.info("Full report:\n" + report)
+    # Save report to S3
+    try:
+        report_date = dt.datetime.now().strftime("%Y%m%d_%H%M%S")
+        report_key = f"reports/full_refresh_{report_date}.txt"
+        s3 = boto3_session.client('s3')
+        s3.put_object(
+            Bucket=S3_BUCKET,
+            Key=report_key,
+            Body=report.encode('utf-8')
+        )
+        logger.info(f"Report saved to s3://{S3_BUCKET}/{report_key}")
+    except Exception as e:
+        logger.error(f"Failed to save report to S3: {e}")
+        logger.info("Full report:\n" + report)
 
 if __name__ == '__main__':
     main()
