@@ -6,6 +6,7 @@ import pandas as pd
 import awswrangler as wr
 import requests
 import random
+import datetime as dt
 
 from bs4 import BeautifulSoup
 
@@ -87,84 +88,138 @@ def try_again(initial_wait_seconds=1, max_retries=5, backoff_factor=1):
     return decorator
 
 
-def fetch_uk_proxies():
-    url = 'https://free-proxy-list.net/uk-proxy.html'
-    headers = {
-        'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/58.0.3029.110 Safari/537.3'}
+def construct_betfair_sp_download_url(country_code: str, type_str: str, file_date: dt.date) -> str:
+    """
+    Constructs the download URL for Betfair SP data files.
+    File date is usually the day after the race date.
+    Example: file_date = race_date + dt.timedelta(days=1)
+    """
+    country_for_link = 'uk' if country_code.lower() == 'gb' else country_code.lower()
+    file_year_str = str(file_date.year)
+    file_month_str = str(file_date.month).zfill(2)
+    file_day_str = str(file_date.day).zfill(2)
 
-    response = requests.get(url, headers=headers, timeout=1)
-    soup = BeautifulSoup(response.text, 'html.parser')
-
-    # Assuming the IP addresses are contained within a table
-    # Note: The website structure might change, so this could need an update
-    table = soup.find('table', 'table table-striped table-bordered')
-    trs = table.find_all('tr')
-    ip_addresses = list()
-    for res in trs[1:]:
-        ip_address = res.next.next
-        port = res.next.next.next.next
-        ip_addresses.append(f"{ip_address}:{port}")
-    return ip_addresses
+    link = (f"https://promo.betfair.com/betfairsp/prices/"
+            f"dwbfprices{country_for_link}{type_str.lower()}"
+            f"{file_day_str}{file_month_str}{file_year_str}.csv")
+    return link
 
 
 @try_again(initial_wait_seconds=1, max_retries=5, backoff_factor=1)
-def download_sp_from_link(link, country, type, day, month, year):
+def download_sp_from_link(link: str,
+                          country: str, # Country for processing (e.g. 'gb', 'ire')
+                          type_str: str, # Type for processing (e.g. 'win', 'place')
+                          # Date components for the *source file name* if saving single parquet
+                          file_year_str: str,
+                          file_month_str: str,
+                          file_day_str: str,
+                          return_df: bool = False):
     print(f'Trying to download link: {link}')
-    # Fetch content with requests to implement timeout
     try:
-        response = requests.get(link, timeout=1)
+        response = requests.get(link, timeout=10) # Using 10s timeout
         response.raise_for_status() # Raise an exception for HTTP errors (4xx or 5xx)
-        # Use io.StringIO to treat the string content as a file
         csv_content = io.StringIO(response.text)
         df = pd.read_csv(csv_content)
-    except requests.exceptions.Timeout:
-        print(f"Timeout error when trying to download link: {link}")
-        raise # Re-raise to be caught by @try_again decorator
-    except requests.exceptions.RequestException as e:
-        print(f"Request error ({e}) when trying to download link: {link}")
-        raise # Re-raise to be caught by @try_again decorator
+    except requests.exceptions.HTTPError as e:
+        if e.response.status_code == 404:
+            print(f"HTTP 404 for {link}. Returning {'empty DataFrame' if return_df else 'None (no upload)'}.")
+            return pd.DataFrame() if return_df else None
+        print(f"HTTP error ({e}) for {link}. Re-raising for @try_again.")
+        raise
+    except (requests.exceptions.Timeout, requests.exceptions.RequestException) as e:
+        print(f"Request error ({e}) when trying to download link: {link}. Re-raising for @try_again.")
+        raise
 
-    print(f"Success: {df.head() if not df.empty else 'empty DataFrame'}")
+    if df.empty:
+        print(f"Downloaded CSV from {link} is empty or failed to parse.")
+        return pd.DataFrame() if return_df else None
 
-    if len(df) > 0:
-        # Clean up data columns
-        df.columns = [col.lower() for col in list(df.columns)]
-        df['event_id'] = df['event_id'].astype(int)
-        df['country'] = country
-        df['type'] = type
+    print(f"Successfully downloaded {len(df)} rows from {link}")
+
+    # Standardize column names
+    df.columns = [col.strip().lower().replace(' ', '_') for col in df.columns]
+
+    # Check for essential columns before proceeding
+    essential_cols = ['event_id', 'event_dt', 'selection_name', 'selection_id'] # Added selection_id
+    if not all(col in df.columns for col in essential_cols):
+        missing_ess_cols = [col for col in essential_cols if col not in df.columns]
+        print(f"Essential columns {missing_ess_cols} missing in {link}. Cannot process. Returning {'empty DataFrame' if return_df else 'None'}.")
+        return pd.DataFrame() if return_df else None
+
+    # --- Start of common data processing logic ---
+    df['event_id'] = df['event_id'].astype(int)
+    df['selection_id'] = df['selection_id'].astype(int) # Ensure selection_id is processed
+    df['country'] = country.lower()
+    df['type'] = type_str.lower()
+
+    try:
         df['event_dt'] = pd.to_datetime(df['event_dt'], format="%d-%m-%Y %H:%M")
-        df['event_dt'] = pd.to_datetime(df['event_dt'].dt.strftime('%Y-%m-%d %H:%M'))
-        df['year'] = df['event_dt'].apply(lambda x: x.year)
-        # Change country UK to GB
-        df['country'] = df['country'].apply(lambda x: 'gb' if x.lower() == 'uk' else x)
-        df['selection_name_cleaned'] = df.apply(
-            lambda x: clean_name(x['selection_name'], append_with=x['country']), axis=1)
-        df['event_date'] = df['event_dt'].apply(lambda x: str(x.date()))
-        df['month'] = month
-        df['day'] = day
-        file_name = f"{type}{country}{year}{month}{day}"
-        # Upload the dataframe to S3 in parquet format
-        wr.s3.to_parquet(df, f"s3://{S3_BUCKET}/data/{file_name}.parquet", boto3_session=boto3_session)
-        # Upload the data to a dataset in S3 as well
-        print('Uploading data to parquet dataset')
-        table = f'betfair_{str(type).lower()}_prices'
+    except ValueError:
+        try:
+            df['event_dt'] = pd.to_datetime(df['event_dt'])
+        except Exception as e_dt:
+            print(f"Could not parse event_dt for link {link}. Error: {e_dt}. Returning {'empty DataFrame' if return_df else 'None'}.")
+            return pd.DataFrame() if return_df else None
+    df['event_dt'] = pd.to_datetime(df['event_dt'].dt.strftime('%Y-%m-%d %H:%M'))
 
-        wr.s3.to_parquet(
-            df,
-            path=f's3://{S3_BUCKET}/{str(type).lower()}_price_datasets/',
-            dataset=True,
-            database=AWS_GLUE_DB,
-            table=table,
-            dtype=SCHEMA_COLUMNS,
-            mode='append',
-            boto3_session=boto3_session
-        )
-        print('Uploading complete')
-    else:
-        print('df returned no rows')
+    # Derive date components from event_dt for DataFrame columns
+    df['year'] = df['event_dt'].dt.year # SCHEMA_COLUMNS type: int
+    df['month'] = df['event_dt'].dt.month.astype(str).str.zfill(2) # SCHEMA_COLUMNS type: string
+    df['day'] = df['event_dt'].dt.day.astype(str).str.zfill(2) # SCHEMA_COLUMNS type: string
+
+    df['country'] = df['country'].apply(lambda x: 'gb' if x.lower() == 'uk' else x.lower())
+    df['selection_name_cleaned'] = df.apply(
+        lambda x: clean_name(x['selection_name'], append_with=x['country']), axis=1)
+    df['event_date'] = df['event_dt'].dt.strftime('%Y-%m-%d')
+
+    # Ensure all SCHEMA_COLUMNS are present, add if missing, and set order
+    processed_cols = {}
+    for col_name in SCHEMA_COLUMNS.keys():
+        if col_name in df.columns:
+            # Attempt to cast to schema type if possible, though to_parquet handles dtype
+            # This is more for consistency if the df is returned and used directly
+            # For now, just assign. `dtype` in `to_parquet` is the main enforcer for S3.
+            processed_cols[col_name] = df[col_name]
+        else:
+            # print(f"Column '{col_name}' missing, adding as None.") # Optional: for debugging
+            processed_cols[col_name] = pd.Series([None] * len(df), name=col_name, dtype=object) # Use object for None compatibility
+
+    df_processed = pd.DataFrame(processed_cols)[list(SCHEMA_COLUMNS.keys())]
+    # --- End of common data processing logic ---
+
+    if return_df:
+        print(f"Processed {len(df_processed)} rows. Returning DataFrame.")
+        return df_processed
+
+    # --- Original S3 upload logic (if not returning df) ---
+    if df_processed.empty:
+        print('Processed DataFrame is empty. No data to upload.')
+        return None
+        
+    s3_file_name = f"{type_str.lower()}{country.lower()}{file_year_str}{file_month_str}{file_day_str}"
+    s3_single_file_path = f"s3://{S3_BUCKET}/data/{s3_file_name}.parquet"
+    print(f"Uploading single file to {s3_single_file_path}")
+    wr.s3.to_parquet(df_processed, s3_single_file_path, boto3_session=boto3_session, compression='snappy')
+
+    print('Uploading data to S3 dataset')
+    athena_table_name = f'betfair_{type_str.lower()}_prices'
+    s3_dataset_path = f's3://{S3_BUCKET}/{type_str.lower()}_price_datasets/'
+
+    wr.s3.to_parquet(
+        df_processed,
+        path=s3_dataset_path,
+        dataset=True,
+        database=AWS_GLUE_DB,
+        table=athena_table_name,
+        dtype=SCHEMA_COLUMNS,
+        mode='append',
+        boto3_session=boto3_session,
+        compression='snappy'
+    )
+    print(f"Uploading complete for {link}")
+    return None # Indicate successful completion of upload path
 
 
 if __name__ == '__main__':
-    link = 'https://promo.betfair.com/betfairsp/prices/dwbfpricesukwin13112020.csv'
-    download_sp_from_link(link=link, country='uk', type='win', day=13,
-                          month=11, year=2020)
+    link = construct_betfair_sp_download_url(country_code='uk', type_str='win', file_date=dt.date(2020, 11, 13))
+    download_sp_from_link(link=link, country='uk', type_str='win', file_year_str='2020', file_month_str='11', file_day_str='13')

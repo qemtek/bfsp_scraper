@@ -5,13 +5,12 @@ import time
 import os
 import datetime as dt
 from calendar import monthrange
-from concurrent.futures import ThreadPoolExecutor
-import threading
-from typing import Tuple, Dict, List
 import logging
 import json
 from collections import defaultdict
 import sys
+from typing import Tuple, Dict
+from tqdm import tqdm
 
 from bfsp_scraper.utils.general import download_sp_from_link
 from bfsp_scraper.utils.s3_tools import list_files
@@ -24,45 +23,40 @@ logging.basicConfig(
 )
 logger = logging.getLogger(__name__)
 
-# Define the number of threads to use
-MAX_THREADS = 2
-
-def worker(params: Tuple[str, str, str, str, str, str, Dict, threading.Lock, threading.Lock]) -> None:
+def worker(params: Tuple[str, str, str, str, str, str, Dict]) -> None:
     """Worker function to download and process a single file."""
-    link, country, type_, day, month, year, shared_stats, success_lock, failure_lock = params
+    link, country, type_, day, month, year, shared_stats = params
     try:
         logger.info(f"Processing {year}/{month}/{day}/{type_}/{country}")
         download_sp_from_link(
             link=link,
             country=country,
-            type=type_,
-            day=day,
-            month=month,
-            year=year
+            type_str=type_,
+            file_day_str=day,
+            file_month_str=month,
+            file_year_str=year
         )
-        # Update success stats (thread-safe)
-        with success_lock:
-            shared_stats['successful'].append({
-                'country': country,
-                'type': type_,
-                'date': f"{year}-{month}-{day}",
-                'link': link
-            })
+        # Update success stats (direct update, no lock needed)
+        shared_stats['successful'].append({
+            'country': country,
+            'type': type_,
+            'date': f"{year}-{month}-{day}",
+            'link': link
+        })
     except Exception as e:
         error_msg = str(e)
         logger.error(f"Error processing {link}: {error_msg}")
-        # Update error stats (thread-safe)
-        with failure_lock:
-            shared_stats['failed'].append({
-                'country': country,
-                'type': type_,
-                'date': f"{year}-{month}-{day}",
-                'link': link,
-                'error': error_msg
-            })
+        # Update error stats (direct update, no lock needed)
+        shared_stats['failed'].append({
+            'country': country,
+            'type': type_,
+            'date': f"{year}-{month}-{day}",
+            'link': link,
+            'error': error_msg
+        })
     finally:
-        # Add a 1-second delay after each task processing, regardless of success or failure
-        time.sleep(1)
+        # Add a delay after each task processing, regardless of success or failure
+        time.sleep(0.5)
 
 def generate_report(stats: Dict) -> str:
     """Generate a detailed report of the download process."""
@@ -111,10 +105,10 @@ def main():
     logger.info("Starting full refresh process")
 
     # --- Environment Variable Handling ---
-    start_date_str = os.environ.get('START_DATE', '2025-04-01')
-    end_date_str = os.environ.get('END_DATE', '2025-05-31')
-    types_str = os.environ.get('TYPES', 'win/place')
-    countries_str = os.environ.get('COUNTRIES', 'uk,ire,fr')
+    start_date_str = os.environ.get('START_DATE', '2025-05-01')
+    end_date_str = os.environ.get('END_DATE', '2025-06-02')
+    types_str = os.environ.get('TYPES', 'win,place')
+    countries_str = os.environ.get('COUNTRIES', 'uk,ire,usa,fr')
 
     missing_vars = []
     if not start_date_str: missing_vars.append('START_DATE')
@@ -155,13 +149,11 @@ def main():
 
     today_date = dt.date.today()
 
-    # Use a regular dictionary for shared_stats and locks for thread-safe appends
+    # Use a regular dictionary for shared_stats
     shared_stats = {
         'successful': [],
         'failed': []
     }
-    success_lock = threading.Lock()
-    failure_lock = threading.Lock()
         
     # Create a list of all download tasks
     tasks = []
@@ -191,18 +183,17 @@ def main():
                 link = (f"https://promo.betfair.com/betfairsp/prices/"
                        f"dwbfprices{country}{type_}{day_str}{month_str}{year}.csv")
                             
-                tasks.append((link, country, type_, day_str, month_str, str(year), shared_stats, success_lock, failure_lock))
+                tasks.append((link, country, type_, day_str, month_str, str(year), shared_stats))
 
-    # Use ThreadPoolExecutor to execute the downloads
-    logger.info(f"Starting downloads using {MAX_THREADS} threads")
+    # Run download tasks sequentially
+    logger.info(f"Starting downloads sequentially.")
         
-    with ThreadPoolExecutor(max_workers=MAX_THREADS) as executor:
-        # map will pass each task tuple as a single argument to the worker function
-        list(executor.map(worker, tasks)) # list() to ensure all futures complete and exceptions are raised
-        
+    for task_params in tqdm(tasks, desc="Downloading files", unit="file"):
+        worker(task_params)
+
     # Generate and save the report
-    report = generate_report(shared_stats) # Pass the regular dict directly
-    logger.info("\n" + report)
+    report_str = generate_report(shared_stats)
+    logger.info("\n" + report_str)
         
     # Save report to S3
     try:
@@ -212,12 +203,14 @@ def main():
         s3.put_object(
             Bucket=S3_BUCKET,
             Key=report_key,
-            Body=report.encode('utf-8')
+            Body=report_str.encode('utf-8')
         )
         logger.info(f"Report saved to s3://{S3_BUCKET}/{report_key}")
     except Exception as e:
         logger.error(f"Failed to save report to S3: {e}")
-        logger.info("Full report:\n" + report)
+        logger.info("Full report:\n" + report_str)
 
-if __name__ == '__main__':
+    logger.info("Full refresh process completed.")
+
+if __name__ == "__main__":
     main()

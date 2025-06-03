@@ -21,7 +21,7 @@ RUN pip install -r requirements.txt
 COPY bfsp_scraper /app/bfsp_scraper
 
 # Set environment variables
-ENV COUNTRIES='uk,ire' \
+ENV COUNTRIES='uk,ire,fr,usa' \
     TYPES='win,place' \
     S3_BUCKET='betfair-sp' \
     PROJECT_DIR=/app \

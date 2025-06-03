@@ -8,3 +8,5 @@ bfsp_scraper/tmp/*
 bfsp_scraper/__pycache__/*
 bfsp_scraper/s3_data/*
 bfsp_scraper/configuration.py
+*.csv
+*.parquet

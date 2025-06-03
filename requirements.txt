@@ -4,6 +4,7 @@ pandas
 apscheduler
 requests
 bs4
+tqdm
 # Testing
 pytest
 pytest-timeout

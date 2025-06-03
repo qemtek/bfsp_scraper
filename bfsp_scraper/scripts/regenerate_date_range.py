@@ -4,12 +4,13 @@ import pandas as pd
 import sys
 from pathlib import Path
 import argparse
+import time
 
 # Add the parent directory to the Python path
 sys.path.append(str(Path(__file__).parent.parent))
 
-from bfsp_scraper.utils.general import download_sp_from_link
-from settings import boto3_session
+from bfsp_scraper.utils.general import download_sp_from_link, construct_betfair_sp_download_url
+from bfsp_scraper.settings import boto3_session
 
 DATABASE = 'finish-time-predict'
 
@@ -92,24 +93,32 @@ def regenerate_data(race_start_date, race_end_date, country):
         # The file date is one day ahead of the race date
         file_date = race_date + dt.timedelta(days=1)
         
-        # Use file_date for constructing the URL
+        # Use file_date for constructing the URL and for S3 single file naming
         file_year = str(file_date.year)
         file_month = str(file_date.month).zfill(2)
         file_day = str(file_date.day).zfill(2)
         
-        # Use race_date for the data we're storing
-        race_year = str(race_date.year)
-        race_month = str(race_date.month).zfill(2)
-        race_day = str(race_date.day).zfill(2)
+        # race_year, race_month, race_day are no longer needed for the call to download_sp_from_link
+        # as the refactored function derives these from event_dt for the DataFrame content.
         
-        for type in ['win', 'place']:
-            link = f"https://promo.betfair.com/betfairsp/prices/" \
-                   f"dwbfprices{'uk' if country == 'gb' else country}{type}{file_day}{file_month}{file_year}.csv"
-            download_sp_from_link(
-                link=link, country=country, type=type,
-                day=race_day, month=race_month, year=race_year,
-                mode='append'
+        for type_str in ['win', 'place']: # Renamed 'type' to 'type_str'
+            link = construct_betfair_sp_download_url(
+                country_code=country,
+                type_str=type_str,
+                file_date=file_date
             )
+            # Call the refactored download_sp_from_link
+            # return_df is False by default, so it will upload to S3
+            download_sp_from_link(
+                link=link, 
+                country=country, 
+                type_str=type_str, # Use renamed variable
+                file_year_str=file_year, # Pass file date components for S3 single file naming
+                file_month_str=file_month,
+                file_day_str=file_day
+                # mode='append' is no longer needed, handled by refactored function
+            )
+            time.sleep(0.5) # Add 0.5 second delay after each API call
 
 
 def main():
